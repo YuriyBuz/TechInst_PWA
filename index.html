@@ -224,7 +224,7 @@
         // ==========================================
         // НАЛАШТУВАННЯ GOOGLE ТАБЛИЦЬ
         // ==========================================
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyKXrTGXWtZBMx57Hm3xLDDIyFi3201k-k7Wc3P5-IOQLtuHJKRsqn4D61RsM1FQynFAw/exec'; 
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw1DIKjWSVogYB3BYPuPEOcRawtx8hMPfmtDKY1JmTcLzUyaL_AFQKzSyNE5Xa5KLFXng/exec'; 
 
         // ==========================================
         // СТАН ДОДАТКУ (State)
@@ -381,13 +381,15 @@
                     const img = new Image();
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 800;
+                        // Зменшуємо роздільну здатність для Google Таблиць
+                        const MAX_WIDTH = 600;
                         const scale = Math.min(MAX_WIDTH / img.width, 1);
                         canvas.width = img.width * scale; 
                         canvas.height = img.height * scale;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        tempMedia.image = canvas.toDataURL('image/jpeg', 0.7);
+                        // Покращуємо стиснення до 0.5 (швидше передається)
+                        tempMedia.image = canvas.toDataURL('image/jpeg', 0.5);
                         updateMediaUI();
                     };
                     img.src = event.target.result;
@@ -480,7 +482,6 @@
         // ШІ КОРЕКТОР (Gemini) - Логіка з Налаштувань
         // ==========================================
         
-        // 1. Функція перевірки ключа з вкладки Налаштування
         async function checkApiKey() {
             const key = DOM.apiKeyInput.value.trim();
             const statusEl = DOM.keyStatusMsg;
@@ -507,7 +508,6 @@
                     statusEl.className = 'mt-3 text-xs font-bold flex items-center gap-1.5 text-green-600';
                     statusEl.innerHTML = `✅ Супер! Ключ дійсний. Доступно моделей: ${modelsCount}`;
                     
-                    // Зберігаємо валідний ключ
                     localStorage.setItem('foodline_inst_apikey', key);
                     state.apiKey = key;
                 } else {
@@ -520,12 +520,10 @@
             }
         }
 
-        // 2. Логіка запиту до ШІ
         function setupAI() {
-            
             DOM.apiKeyInput.addEventListener('input', (e) => {
                 state.apiKey = e.target.value;
-                DOM.keyStatusMsg.classList.add('hidden'); // Ховаємо статус при зміні
+                DOM.keyStatusMsg.classList.add('hidden');
             });
             DOM.checkKeyBtn.onclick = checkApiKey;
 
@@ -535,8 +533,6 @@
                 
                 let activeKey = state.apiKey.trim();
                 
-                // Якщо тестуємо у Canvas, там є свій прихований ключ, 
-                // тому дозволяємо пустий рядок ТІЛЬКИ якщо ми не на localhost або github
                 const isProd = window.location.hostname !== "localhost" && window.location.hostname !== "";
                 if (!activeKey && isProd) {
                     showToast("Потрібен API Ключ! Перейдіть в 'Налаштування'", true);
@@ -548,9 +544,8 @@
                 DOM.aiBtn.disabled = true;
 
                 try {
-                    let usedModel = "gemini-2.5-flash-preview-09-2025"; // Дефолт
+                    let usedModel = "gemini-2.5-flash-preview-09-2025"; 
                     
-                    // Динамічний пошук моделі як в MRP
                     if (activeKey !== "") {
                         try {
                             const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${activeKey}`);
@@ -566,7 +561,7 @@
                                                 availableModels[0];
                                 }
                             }
-                        } catch (e) { console.warn("Не вдалося підтягнути список моделей, використовуємо дефолтну"); }
+                        } catch (e) { console.warn("Не вдалося підтягнути список моделей"); }
                     }
 
                     const url = `https://generativelanguage.googleapis.com/v1beta/models/${usedModel}:generateContent?key=${activeKey}`;
@@ -659,13 +654,15 @@
                 DOM.saveBtn.disabled = true;
                 
                 try {
+                    // Формуємо payload з базовим текстом і масивом base64 зображень
                     const payload = {
                         action: "save_instruction",
                         id: state.docId,
                         title: state.title,
                         equipment: state.equipment,
                         date: new Date().toLocaleString('uk-UA'),
-                        steps_text: state.steps.map((s, i) => `${i+1}. ${s.text || '[Медіафайл]'}`).join('\n')
+                        steps_text: state.steps.map((s, i) => `${i+1}. ${s.text || ''}`).join('\n'),
+                        images: state.steps.map(s => s.image || '').filter(img => img !== '') // Передаємо стиснуті фото
                     };
 
                     await fetch(GOOGLE_SCRIPT_URL, {
