@@ -80,9 +80,10 @@
         </header>
 
         <!-- TABS -->
-        <div class="flex gap-2 mb-6 bg-slate-200 p-1 rounded-xl tabs-container no-print">
-            <button id="tab-editor" class="flex-1 py-2 rounded-lg bg-white text-emerald-700 font-bold shadow-sm transition-all text-sm">📝 Редактор</button>
-            <button id="tab-archive" class="flex-1 py-2 rounded-lg text-slate-600 font-medium hover:bg-slate-300 transition-all text-sm">📂 Архів</button>
+        <div class="flex gap-1 sm:gap-2 mb-6 bg-slate-200 p-1 rounded-xl tabs-container no-print">
+            <button id="tab-editor" class="flex-1 py-2 rounded-lg bg-white text-emerald-700 font-bold shadow-sm transition-all text-xs sm:text-sm">📝 Редактор</button>
+            <button id="tab-archive" class="flex-1 py-2 rounded-lg text-slate-600 font-medium hover:bg-slate-300 transition-all text-xs sm:text-sm">📂 Архів</button>
+            <button id="tab-settings" class="flex-1 py-2 rounded-lg text-slate-600 font-medium hover:bg-slate-300 transition-all text-xs sm:text-sm">⚙️ Налашт.</button>
         </div>
 
         <!-- ================= EDITOR TAB ================= -->
@@ -99,10 +100,7 @@
 
             <!-- Список кроків -->
             <div id="steps-container" class="space-y-4">
-                <div id="empty-msg" class="text-center text-slate-400 py-8 no-print">
-                    <div class="text-4xl mb-2">📋</div>
-                    Додайте перший крок інструкції нижче
-                </div>
+                <!-- Кроки будуть тут -->
             </div>
 
             <!-- Форма додавання нового кроку -->
@@ -112,9 +110,7 @@
                     <h3 class="font-bold text-slate-700 flex items-center gap-2">
                         <span class="text-emerald-500 text-lg">➕</span> Новий крок
                     </h3>
-                    <button id="reset-ai-key-btn" class="text-xs text-slate-400 hover:text-emerald-600" title="Налаштування ШІ">🔒 Налаштувати ШІ</button>
                 </div>
-                
                 
                 <textarea id="step-text" rows="3" class="input-field resize-none bg-slate-50" placeholder="Опишіть дію (або надиктуйте голосом)..."></textarea>
                 
@@ -174,10 +170,41 @@
             </div>
         </div>
 
+        <!-- ================= SETTINGS TAB ================= -->
+        <div id="view-settings" class="hidden fade-in space-y-6">
+            <div class="card p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h2 class="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">⚙️ Налаштування системи</h2>
+                
+                <h3 class="text-sm font-bold text-slate-700 uppercase mb-3 border-b pb-2">Штучний Інтелект (Gemini)</h3>
+                <div class="mb-8 bg-purple-50 px-4 py-4 rounded-xl border border-purple-100">
+                    <label class="block text-xs font-bold text-purple-700 mb-1">Особистий API Ключ</label>
+                    <div class="flex gap-2">
+                        <input 
+                            type="password" 
+                            id="setting-api-key" 
+                            class="flex-1 border border-purple-200 rounded-lg px-3 py-2 text-slate-800 font-mono text-sm outline-none focus:border-purple-500 bg-white shadow-sm" 
+                            placeholder="AIzaSy..." 
+                        />
+                        <button 
+                            id="check-key-btn"
+                            class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm transition-colors flex items-center gap-1 shrink-0"
+                        >
+                            Перевірити
+                        </button>
+                    </div>
+                    
+                    <!-- Статус перевірки ключа -->
+                    <div id="key-status-msg" class="mt-3 text-xs font-bold flex items-center gap-1.5 hidden"></div>
+                    
+                    <p class="text-[10px] text-purple-600 mt-3">Ключ використовується для виправлення тексту ШІ-редактором. Зберігається локально у вашому браузері на цьому пристрої.</p>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- Плаваючий підвал (Тільки для редактора) -->
-    <footer id="footer-bar" class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 p-3 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] z-40">
+    <footer id="footer-bar" class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 p-3 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] z-40 transition-transform duration-300">
         <div class="container mx-auto max-w-2xl flex gap-3">
             <button id="save-sheets-btn" class="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white py-3 px-4 rounded-xl font-bold shadow-md hover:bg-emerald-700 active:scale-95 transition-all">
                 ☁️ В Таблицю
@@ -191,21 +218,6 @@
     <!-- Toast сповіщення -->
     <div id="toast" class="fixed top-5 right-5 left-5 sm:left-auto bg-slate-800 text-white py-3 px-6 rounded-xl shadow-2xl transform -translate-y-20 opacity-0 transition-all duration-300 z-50 font-bold text-center pointer-events-none">
         Повідомлення
-    </div>
-
-    <!-- Модальне вікно для введення ключа (Пароля) ШІ -->
-    <div id="ai-key-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl transform transition-all">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold text-slate-800">Доступ до ШІ 🔐</h3>
-                <button id="close-key-btn" class="text-slate-400 hover:text-red-500 text-xl font-bold">&times;</button>
-            </div>
-            <p class="text-sm text-slate-500 mb-4">Введіть пароль для використання розумного редактора.</p>
-            <input type="password" id="ai-key-input" class="input-field mb-5" placeholder="Пароль...">
-            <button id="save-key-btn" class="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold shadow-md hover:bg-emerald-700 transition-colors">
-                Розблокувати
-            </button>
-        </div>
     </div>
 
     <script>
@@ -222,7 +234,8 @@
             title: '',
             equipment: '',
             steps: [],
-            archive: []
+            archive: [],
+            apiKey: ''
         };
         let tempMedia = { image: null, videoUrl: null, videoFile: null };
 
@@ -231,14 +244,15 @@
             date: document.getElementById('current-date'),
             tabEd: document.getElementById('tab-editor'),
             tabAr: document.getElementById('tab-archive'),
+            tabSet: document.getElementById('tab-settings'),
             viewEd: document.getElementById('view-editor'),
             viewAr: document.getElementById('view-archive'),
+            viewSet: document.getElementById('view-settings'),
             footer: document.getElementById('footer-bar'),
             
             title: document.getElementById('doc-title'),
             eq: document.getElementById('doc-eq'),
             stepsCont: document.getElementById('steps-container'),
-            emptyMsg: document.getElementById('empty-msg'),
             
             stepText: document.getElementById('step-text'),
             sttBtn: document.getElementById('stt-btn'),
@@ -263,12 +277,10 @@
             statusDot: document.getElementById('statusDot'),
             statusText: document.getElementById('statusText'),
 
-            // AI Modal Elements
-            aiModal: document.getElementById('ai-key-modal'),
-            aiKeyInput: document.getElementById('ai-key-input'),
-            saveKeyBtn: document.getElementById('save-key-btn'),
-            closeKeyBtn: document.getElementById('close-key-btn'),
-            resetAiKeyBtn: document.getElementById('reset-ai-key-btn')
+            // Settings Elements
+            apiKeyInput: document.getElementById('setting-api-key'),
+            checkKeyBtn: document.getElementById('check-key-btn'),
+            keyStatusMsg: document.getElementById('key-status-msg')
         };
 
         // ==========================================
@@ -281,6 +293,13 @@
             window.addEventListener('online', updateNetworkStatus);
             window.addEventListener('offline', updateNetworkStatus);
             
+            // Завантаження збережених налаштувань
+            const savedKey = localStorage.getItem('foodline_inst_apikey');
+            if (savedKey) {
+                state.apiKey = savedKey;
+                DOM.apiKeyInput.value = savedKey;
+            }
+
             loadLocalArchive();
             setupTabs();
             setupMedia();
@@ -315,20 +334,38 @@
         // НАВІГАЦІЯ (Вкладки)
         // ==========================================
         function setupTabs() {
-            const activeClass = "flex-1 py-2 rounded-lg bg-white text-emerald-700 font-bold shadow-sm transition-all text-sm";
-            const inactiveClass = "flex-1 py-2 rounded-lg text-slate-600 font-medium hover:bg-slate-300 transition-all text-sm";
+            const activeClass = "flex-1 py-2 rounded-lg bg-white text-emerald-700 font-bold shadow-sm transition-all text-xs sm:text-sm";
+            const inactiveClass = "flex-1 py-2 rounded-lg text-slate-600 font-medium hover:bg-slate-300 transition-all text-xs sm:text-sm";
+
+            const hideAll = () => {
+                DOM.viewEd.classList.add('hidden');
+                DOM.viewAr.classList.add('hidden');
+                DOM.viewSet.classList.add('hidden');
+                DOM.tabEd.className = inactiveClass;
+                DOM.tabAr.className = inactiveClass;
+                DOM.tabSet.className = inactiveClass;
+                DOM.footer.classList.add('translate-y-[150%]'); // ховаємо футер
+            };
 
             DOM.tabEd.onclick = () => {
-                DOM.viewEd.classList.remove('hidden'); DOM.viewAr.classList.add('hidden');
-                DOM.footer.style.display = 'block';
-                DOM.tabEd.className = activeClass; DOM.tabAr.className = inactiveClass;
+                hideAll();
+                DOM.viewEd.classList.remove('hidden');
+                DOM.tabEd.className = activeClass;
+                DOM.footer.classList.remove('translate-y-[150%]'); // показуємо футер
                 renderSteps();
             };
+            
             DOM.tabAr.onclick = () => {
-                DOM.viewEd.classList.add('hidden'); DOM.viewAr.classList.remove('hidden');
-                DOM.footer.style.display = 'none';
-                DOM.tabAr.className = activeClass; DOM.tabEd.className = inactiveClass;
+                hideAll();
+                DOM.viewAr.classList.remove('hidden');
+                DOM.tabAr.className = activeClass;
                 renderArchive();
+            };
+
+            DOM.tabSet.onclick = () => {
+                hideAll();
+                DOM.viewSet.classList.remove('hidden');
+                DOM.tabSet.className = activeClass;
             };
         }
 
@@ -440,69 +477,70 @@
         }
 
         // ==========================================
-        // ШІ КОРЕКТОР (Gemini) З ПАРОЛЕМ
+        // ШІ КОРЕКТОР (Gemini) - Логіка з Налаштувань
         // ==========================================
-        async function fetchWithRetry(url, options, retries = 5) {
-            const delays = [1000, 2000, 4000, 8000, 16000];
-            for (let i = 0; i < retries; i++) {
-                try {
-                    const response = await fetch(url, options);
+        
+        // 1. Функція перевірки ключа з вкладки Налаштування
+        async function checkApiKey() {
+            const key = DOM.apiKeyInput.value.trim();
+            const statusEl = DOM.keyStatusMsg;
+            
+            if (!key) {
+                statusEl.className = 'mt-3 text-xs font-bold flex items-center gap-1.5 text-red-600';
+                statusEl.innerHTML = '⚠️ Ключ не введено';
+                statusEl.classList.remove('hidden');
+                localStorage.removeItem('foodline_inst_apikey');
+                state.apiKey = '';
+                return;
+            }
+
+            statusEl.className = 'mt-3 text-xs font-bold flex items-center gap-1.5 text-slate-500';
+            statusEl.innerHTML = '⏳ З\'єднуюсь з серверами Google...';
+            statusEl.classList.remove('hidden');
+
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+                const data = await res.json();
+                
+                if (res.ok && data.models) {
+                    const modelsCount = data.models.filter(m => m.name.includes("gemini")).length;
+                    statusEl.className = 'mt-3 text-xs font-bold flex items-center gap-1.5 text-green-600';
+                    statusEl.innerHTML = `✅ Супер! Ключ дійсний. Доступно моделей: ${modelsCount}`;
                     
-                    if (response.status === 400 || response.status === 401 || response.status === 403) {
-                        const err = new Error("AuthError");
-                        err.status = response.status;
-                        throw err;
-                    }
-                    
-                    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-                    return await response.json();
-                } catch (err) {
-                    if (err.message === "AuthError" || i === retries - 1) throw err;
-                    await new Promise(res => setTimeout(res, delays[i]));
+                    // Зберігаємо валідний ключ
+                    localStorage.setItem('foodline_inst_apikey', key);
+                    state.apiKey = key;
+                } else {
+                    statusEl.className = 'mt-3 text-xs font-bold flex items-center gap-1.5 text-red-600';
+                    statusEl.innerHTML = `⚠️ Помилка доступу: ${data.error?.message || 'Невідома помилка'}`;
                 }
+            } catch (e) {
+                statusEl.className = 'mt-3 text-xs font-bold flex items-center gap-1.5 text-red-600';
+                statusEl.innerHTML = '⚠️ Помилка мережі при перевірці.';
             }
         }
 
+        // 2. Логіка запиту до ШІ
         function setupAI() {
-            // Управління модальним вікном пароля
-            const openKeyModal = () => {
-                DOM.aiModal.classList.remove('hidden');
-                DOM.aiModal.classList.add('flex');
-                DOM.aiKeyInput.value = '';
-            };
+            
+            DOM.apiKeyInput.addEventListener('input', (e) => {
+                state.apiKey = e.target.value;
+                DOM.keyStatusMsg.classList.add('hidden'); // Ховаємо статус при зміні
+            });
+            DOM.checkKeyBtn.onclick = checkApiKey;
 
-            const closeKeyModal = () => {
-                DOM.aiModal.classList.add('hidden');
-                DOM.aiModal.classList.remove('flex');
-            };
-
-            DOM.resetAiKeyBtn.onclick = () => {
-                localStorage.removeItem('foodline_ai_unlocked');
-                showToast("Доступ до ШІ заблоковано.");
-            };
-
-            DOM.closeKeyBtn.onclick = closeKeyModal;
-
-            DOM.saveKeyBtn.onclick = () => {
-                const pwd = DOM.aiKeyInput.value.trim();
-                if (pwd === '0987') {
-                    localStorage.setItem('foodline_ai_unlocked', 'true');
-                    closeKeyModal();
-                    showToast("ШІ розблоковано!");
-                } else {
-                    showToast("Невірний пароль!", true);
-                }
-            };
-
-            // Логіка запиту до ШІ
             DOM.aiBtn.onclick = async () => {
                 const text = DOM.stepText.value.trim();
                 if (!text) { showToast("Напишіть або надиктуйте текст", true); return; }
                 
-                // Перевірка наявності пароля
-                const isUnlocked = localStorage.getItem('foodline_ai_unlocked') === 'true';
-                if (!isUnlocked) {
-                    openKeyModal();
+                let activeKey = state.apiKey.trim();
+                
+                // Якщо тестуємо у Canvas, там є свій прихований ключ, 
+                // тому дозволяємо пустий рядок ТІЛЬКИ якщо ми не на localhost або github
+                const isProd = window.location.hostname !== "localhost" && window.location.hostname !== "";
+                if (!activeKey && isProd) {
+                    showToast("Потрібен API Ключ! Перейдіть в 'Налаштування'", true);
+                    DOM.tabSet.click();
                     return;
                 }
                 
@@ -510,27 +548,47 @@
                 DOM.aiBtn.disabled = true;
 
                 try {
-                    // =========================================================================
-                    // УВАГА: Вставте ваш справжній API-ключ Gemini у змінні нижче.
-                    // Він буде захований у коді, але захищений паролем `0987` в інтерфейсі.
-                    // =========================================================================
-                    const apiKey = ""; 
-
-                    if (!apiKey && window.location.hostname !== "localhost" && window.location.hostname !== "") {
-                        console.warn("API ключ відсутній. Перевірте налаштування.");
-                    }
+                    let usedModel = "gemini-2.5-flash-preview-09-2025"; // Дефолт
                     
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-                    const options = {
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: `Виправ граматичні помилки, покращ стиль та зроби текст максимально професійним для технічної інструкції на виробництві. Поверни лише виправлений текст без коментарів.\n\nТекст: ${text}` }] }],
-                            systemInstruction: { parts: [{ text: "Ти експерт та редактор технічної документації. Мова: українська." }] }
-                        })
+                    // Динамічний пошук моделі як в MRP
+                    if (activeKey !== "") {
+                        try {
+                            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${activeKey}`);
+                            if (res.ok) {
+                                const data = await res.json();
+                                const availableModels = data.models
+                                    .filter(m => m.supportedGenerationMethods?.includes("generateContent") && m.name.includes("gemini"))
+                                    .map(m => m.name.replace('models/', ''));
+                                    
+                                if (availableModels.length > 0) {
+                                    usedModel = availableModels.find(m => m === 'gemini-1.5-flash') || 
+                                                availableModels.find(m => m.includes('flash')) || 
+                                                availableModels[0];
+                                }
+                            }
+                        } catch (e) { console.warn("Не вдалося підтягнути список моделей, використовуємо дефолтну"); }
+                    }
+
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${usedModel}:generateContent?key=${activeKey}`;
+                    const payload = {
+                        contents: [{ parts: [{ text: `Виправ граматичні помилки, покращ стиль та зроби текст максимально професійним для технічної інструкції на виробництві. Поверни лише виправлений текст без коментарів.\n\nТекст: ${text}` }] }],
+                        systemInstruction: { parts: [{ text: "Ти експерт та редактор технічної документації. Мова: українська." }] }
                     };
 
-                    const data = await fetchWithRetry(url, options);
+                    const response = await fetch(url, {
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        if (response.status === 400 || response.status === 401 || response.status === 403) {
+                            throw new Error("AuthError");
+                        }
+                        throw new Error(`HTTP Error: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
                     const correctedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
                     
                     if (correctedText) { 
@@ -541,11 +599,12 @@
                     }
                 } catch (err) { 
                     if (err.message === "AuthError") {
-                        showToast("Збій ШІ. Перевірте API-ключ у коді!", true);
+                        showToast("Невірний API-ключ! Оновіть його в Налаштуваннях", true);
+                        DOM.tabSet.click();
                     } else {
                         showToast("Помилка ШІ. Перевірте Інтернет", true); 
                     }
-                    console.error("Помилка детальніше:", err);
+                    console.error("Помилка ШІ:", err);
                 } finally { 
                     DOM.aiBtn.innerHTML = `✨ ШІ`; 
                     DOM.aiBtn.disabled = false; 
@@ -574,7 +633,7 @@
             };
 
             DOM.btnNewDoc.onclick = () => {
-                state = { docId: crypto.randomUUID(), title: '', equipment: '', steps: [], archive: state.archive };
+                state = { ...state, docId: crypto.randomUUID(), title: '', equipment: '', steps: [] };
                 DOM.title.value = ''; DOM.eq.value = ''; DOM.stepText.value = ''; DOM.clearMedia.click();
                 DOM.tabEd.click();
             };
@@ -628,10 +687,8 @@
         function renderSteps() {
             DOM.title.value = state.title; DOM.eq.value = state.equipment;
             if (state.steps.length === 0) {
-                DOM.stepsCont.innerHTML = ''; DOM.stepsCont.appendChild(DOM.emptyMsg);
-                DOM.emptyMsg.classList.remove('hidden'); return;
+                DOM.stepsCont.innerHTML = ''; return;
             }
-            DOM.emptyMsg.classList.add('hidden');
             
             DOM.stepsCont.innerHTML = state.steps.map((step, index) => `
                 <div class="card p-4 sm:p-5 rounded-2xl shadow-sm relative group border-l-4 border-l-emerald-500 mb-4 transition-all step-item">
