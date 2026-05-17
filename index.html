@@ -241,7 +241,7 @@
 
         let tempNodeImage = null; let activeNodeIdForStep = null; 
         let tempStepImages = []; let tempStepVideoUrl = null; let editingStepId = null; 
-        let DOM = {}; // Ініціалізується після завантаження
+        let DOM = {}; 
 
         function initDOM() {
             DOM = {
@@ -267,6 +267,7 @@
             setupSpeechToText();
             setupAI();
             setupButtons();
+            setupModalButtons(); // Тут була проблема — ця функція тепер викликається!
             
             DOM.title.addEventListener('input', saveLocal);
             DOM.eq.addEventListener('input', saveLocal);
@@ -298,7 +299,9 @@
                 const pass = prompt("Введіть пароль доступу до налаштувань:");
                 if (pass === "5588") {
                     hideAll(); DOM.viewSet.classList.remove('hidden'); DOM.tabSet.className = actCls;
-                    DOM.setEmail.value = state.settings.email; DOM.setDrive.value = state.settings.driveId; DOM.setApi.value = state.settings.apiKey;
+                    DOM.setEmail.value = state.settings.email || ''; 
+                    DOM.setDrive.value = state.settings.driveId || ''; 
+                    DOM.setApi.value = state.settings.apiKey || '';
                     DOM.keyStatusMsg.classList.add('hidden');
                 } else {
                     if (pass !== null) showToast("Невірний пароль!", true);
@@ -350,7 +353,42 @@
         }
         window.removeTempStepImage = (idx) => { tempStepImages.splice(idx, 1); updateModalMediaUI(); };
 
-        DOM.addNodeBtn = document.getElementById('add-node-btn'); // Fallback ensure
+        // Прив'язка кнопок модального вікна (Саме цього не вистачало!)
+        function setupModalButtons() {
+            if(DOM.closeStepModal) {
+                DOM.closeStepModal.onclick = () => DOM.stepModal.classList.add('hidden');
+            }
+            if(DOM.modalClearBtn) {
+                DOM.modalClearBtn.onclick = () => { 
+                    DOM.modalText.value = ''; 
+                    tempStepImages = []; 
+                    tempStepVideoUrl = null; 
+                    updateModalMediaUI(); 
+                    DOM.modalVideoPrev.classList.add('hidden'); 
+                };
+            }
+            if(DOM.modalSaveBtn) {
+                DOM.modalSaveBtn.onclick = () => {
+                    const txt = DOM.modalText.value.trim();
+                    if(!txt && !tempStepImages.length && !tempStepVideoUrl) return showToast("Додайте текст, фото або відео", true);
+                    const node = state.nodes.find(n=>n.id===activeNodeIdForStep);
+                    if(node) {
+                        if(editingStepId) {
+                            const step = node.steps.find(s=>s.id===editingStepId);
+                            step.text = txt; 
+                            step.images = [...tempStepImages]; 
+                            step.videoUrl = tempStepVideoUrl;
+                        } else { 
+                            node.steps.push({ id: crypto.randomUUID(), text: txt, images: [...tempStepImages], videoUrl: tempStepVideoUrl }); 
+                        }
+                        DOM.stepModal.classList.add('hidden'); 
+                        renderNodes(); 
+                        saveLocal();
+                    }
+                };
+            }
+        }
+
         if (DOM.addNodeBtn) DOM.addNodeBtn.onclick = () => {
             const t = DOM.nodeTitle.value.trim();
             if(!t && !tempNodeImage) return showToast("Введіть назву вузла або додайте фото", true);
@@ -412,22 +450,6 @@
             updateModalMediaUI(); if(tempStepVideoUrl) DOM.modalVideoPrev.classList.remove('hidden'); else DOM.modalVideoPrev.classList.add('hidden');
             DOM.stepModal.classList.remove('hidden');
         };
-        
-        if(DOM.closeStepModal) DOM.closeStepModal.onclick = () => DOM.stepModal.classList.add('hidden');
-        if(DOM.modalClearBtn) DOM.modalClearBtn.onclick = () => { DOM.modalText.value = ''; tempStepImages = []; tempStepVideoUrl = null; updateModalMediaUI(); DOM.modalVideoPrev.classList.add('hidden'); };
-        
-        if(DOM.modalSaveBtn) DOM.modalSaveBtn.onclick = () => {
-            const txt = DOM.modalText.value.trim();
-            if(!txt && !tempStepImages.length && !tempStepVideoUrl) return showToast("Додайте текст, фото або відео", true);
-            const node = state.nodes.find(n=>n.id===activeNodeIdForStep);
-            if(node) {
-                if(editingStepId) {
-                    const step = node.steps.find(s=>s.id===editingStepId);
-                    step.text = txt; step.images = [...tempStepImages]; step.videoUrl = tempStepVideoUrl;
-                } else { node.steps.push({ id: crypto.randomUUID(), text: txt, images: [...tempStepImages], videoUrl: tempStepVideoUrl }); }
-                DOM.stepModal.classList.add('hidden'); renderNodes(); saveLocal();
-            }
-        };
 
         let isRec = false; let originalSessionText = '';
         const sr = window.SpeechRecognition || window.webkitSpeechRecognition ? new (window.SpeechRecognition || window.webkitSpeechRecognition)() : null;
@@ -473,6 +495,7 @@
             }
         }
 
+        // Відновлена логіка ШІ
         function setupAI() {
             if (DOM.checkKeyBtn) DOM.checkKeyBtn.onclick = checkApiKey;
             if (DOM.setApi) DOM.setApi.addEventListener('input', () => { DOM.keyStatusMsg.classList.add('hidden'); });
@@ -481,9 +504,13 @@
                 const txt = DOM.modalText.value.trim();
                 if(!txt) return showToast("Спочатку напишіть або надиктуйте текст", true);
                 
-                let activeKey = state.settings.apiKey;
+                let activeKey = (state.settings.apiKey || "").trim();
                 const isProd = window.location.hostname !== "localhost" && window.location.hostname !== "";
-                if(!activeKey && isProd) { showToast("Потрібен API Ключ! Перейдіть в 'Налаштування'", true); return DOM.tabSet.click(); }
+                if(!activeKey && isProd) { 
+                    showToast("Потрібен API Ключ! Перейдіть в 'Налаштування'", true); 
+                    DOM.stepModal.classList.add('hidden');
+                    return DOM.tabSet.click(); 
+                }
                 
                 DOM.modalAiBtn.innerHTML = "⏳..."; DOM.modalAiBtn.disabled = true;
                 try {
@@ -511,7 +538,11 @@
                     const data = await response.json();
                     if(data.candidates) { DOM.modalText.value = data.candidates[0].content.parts[0].text.trim(); showToast("Текст успішно покращено!"); }
                 } catch(e) { 
-                    if (e.message === "AuthError") { showToast("Невірний API-ключ! Оновіть в Налаштуваннях", true); DOM.tabSet.click(); }
+                    if (e.message === "AuthError") { 
+                        showToast("Невірний API-ключ! Оновіть в Налаштуваннях", true); 
+                        DOM.stepModal.classList.add('hidden');
+                        DOM.tabSet.click(); 
+                    }
                     else { showToast("Помилка зв'язку з ШІ. Перевірте ключ", true); }
                 } finally { DOM.modalAiBtn.innerHTML = "✨ ШІ"; DOM.modalAiBtn.disabled = false; }
             };
