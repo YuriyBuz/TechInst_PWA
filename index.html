@@ -268,6 +268,7 @@
             setupAI();
             setupButtons();
             setupModalButtons(); // Тут була проблема — ця функція тепер викликається!
+            setupNodeButton(); // Додали ініціалізацію кнопки "Зберегти вузол"
             
             DOM.title.addEventListener('input', saveLocal);
             DOM.eq.addEventListener('input', saveLocal);
@@ -389,13 +390,16 @@
             }
         }
 
-        if (DOM.addNodeBtn) DOM.addNodeBtn.onclick = () => {
-            const t = DOM.nodeTitle.value.trim();
-            if(!t && !tempNodeImage) return showToast("Введіть назву вузла або додайте фото", true);
-            state.nodes.push({ id: crypto.randomUUID(), title: t, desc: DOM.nodeDesc.value.trim(), image: tempNodeImage, steps: [] });
-            DOM.nodeTitle.value = ''; DOM.nodeDesc.value = ''; tempNodeImage = null; DOM.nodeImgPrevBox.classList.add('hidden');
-            renderNodes(); saveLocal();
-        };
+        // Обгорнули кнопку в окрему функцію
+        function setupNodeButton() {
+            if (DOM.addNodeBtn) DOM.addNodeBtn.onclick = () => {
+                const t = DOM.nodeTitle.value.trim();
+                if(!t && !tempNodeImage) return showToast("Введіть назву вузла або додайте фото", true);
+                state.nodes.push({ id: crypto.randomUUID(), title: t, desc: DOM.nodeDesc.value.trim(), image: tempNodeImage, steps: [] });
+                DOM.nodeTitle.value = ''; DOM.nodeDesc.value = ''; tempNodeImage = null; DOM.nodeImgPrevBox.classList.add('hidden');
+                renderNodes(); saveLocal();
+            };
+        }
 
         function renderNodes() {
             DOM.title.value = state.title; DOM.eq.value = state.equipment;
