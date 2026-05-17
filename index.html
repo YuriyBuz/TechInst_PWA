@@ -7,7 +7,7 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <!-- Бібліотека для редагування фото (обрізка, стрілки, текст) -->
+    <!-- Бібліотека для редагування фото -->
     <script src="https://scaleflex.cloudimg.io/v7/plugins/filerobot-image-editor/latest/filerobot-image-editor.min.js"></script>
     
     <style>
@@ -26,24 +26,23 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
-        /* Стилі для PDF та Друку */
+        /* СУВОРА ІЗОЛЯЦІЯ ДЛЯ ДРУКУ ТА PDF */
         @media print {
-            body { background: white !important; padding: 0; }
-            .no-print { display: none !important; }
-            #pdf-template { display: block !important; }
+            body > * { display: none !important; }
+            body > #pdf-template { display: block !important; }
+            body { background: white !important; padding: 0 !important; margin: 0 !important; }
+            @page { margin: 10mm; }
         }
-        body.pdf-export-mode .no-print, body.pdf-export-mode header, body.pdf-export-mode #footer-bar, body.pdf-export-mode .tabs-container, body.pdf-export-mode #view-editor { display: none !important; }
-        body.pdf-export-mode { background-color: white !important; }
-        body.pdf-export-mode #pdf-template { display: block !important; }
+        body.pdf-export-mode > * { display: none !important; }
+        body.pdf-export-mode > #pdf-template { display: block !important; }
+        body.pdf-export-mode { background: white !important; }
 
-        /* Таблиця для PDF згідно зі зразком */
-        .pdf-table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: sans-serif; margin-top: 10px; }
-        .pdf-table th, .pdf-table td { border: 1px solid #000000 !important; padding: 8px 10px; vertical-align: top; text-align: left; }
-        .pdf-table th { background-color: #f1f5f9 !important; font-weight: bold; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .pdf-node-img { max-width: 100%; max-height: 200px; object-fit: contain; margin-top: 8px; display: block; border-radius: 4px; border: 1px solid #ccc; }
-        .pdf-step-img { max-width: 100%; max-height: 120px; object-fit: contain; margin: 4px 0; display: block; border-radius: 4px; border: 1px solid #ccc; }
+        /* Дизайн таблиці PDF */
+        .pdf-table { width: 100%; border-collapse: collapse; font-family: sans-serif; margin-top: 10px; }
+        .pdf-table th, .pdf-table td { border: 1px solid #cbd5e1 !important; padding: 12px; vertical-align: top; text-align: left; }
+        .pdf-table th { background-color: #f8fafc !important; font-weight: bold; font-size: 14px; text-transform: uppercase; color: #475569; letter-spacing: 0.5px; }
         
-        #pdf-main-image { width: 100%; height: 320px; max-height: 320px; object-fit: contain; margin-bottom: 20px; }
+        #pdf-main-image { width: 100%; height: 350px; max-height: 350px; object-fit: contain; margin-bottom: 20px; border: 1px solid #000; padding: 4px; border-radius: 8px; }
         .page-break { page-break-before: always; }
     </style>
 </head>
@@ -52,7 +51,7 @@
     <div class="container mx-auto max-w-2xl p-3 sm:p-6 relative">
         
         <!-- HEADER -->
-        <header class="flex justify-between items-center mb-4 pb-4 border-b border-gray-200 no-print">
+        <header class="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
             <div class="w-1/3"><div id="current-date" class="text-xs font-bold text-slate-500 leading-tight"></div></div>
             <div class="w-1/3 flex justify-center">
                 <img src="https://foodline-production.com/wp-content/uploads/2021/10/3752781497_3752781497.webp" alt="Food Line" class="h-10 w-auto rounded-lg bg-white p-1 shadow-sm" onerror="this.src='https://placehold.co/100x40?text=Food+Line';">
@@ -66,7 +65,7 @@
         </header>
 
         <!-- TABS -->
-        <div class="flex gap-1 sm:gap-2 mb-6 bg-slate-200 p-1 rounded-xl tabs-container no-print">
+        <div class="flex gap-1 sm:gap-2 mb-6 bg-slate-200 p-1 rounded-xl tabs-container">
             <button id="tab-editor" class="flex-1 py-2 rounded-lg bg-white text-emerald-700 font-bold shadow-sm transition-all text-xs sm:text-sm">📝 Редактор</button>
             <button id="tab-archive" class="flex-1 py-2 rounded-lg text-slate-600 font-medium hover:bg-slate-300 transition-all text-xs sm:text-sm">📂 Архів</button>
             <button id="tab-settings" class="flex-1 py-2 rounded-lg text-slate-600 font-medium hover:bg-slate-300 transition-all text-xs sm:text-sm">⚙️ Налашт.</button>
@@ -103,7 +102,8 @@
                     </div>
                     <label id="main-photo-label" class="flex items-center justify-center gap-2 px-4 py-3 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl hover:bg-slate-100 cursor-pointer text-slate-600 font-medium transition-colors">
                         📷 Додати загальне фото
-                        <input type="file" id="main-photo-input" accept="image/*" class="hidden">
+                        <!-- Повернено capture="environment" -->
+                        <input type="file" id="main-photo-input" accept="image/*" capture="environment" class="hidden">
                     </label>
                 </div>
             </div>
@@ -136,7 +136,7 @@
                 <div class="flex flex-wrap gap-2 items-center justify-between mt-3">
                     <label id="node-photo-label" class="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 cursor-pointer font-bold text-sm shadow-sm transition-colors">
                         📷 Фото вузла
-                        <input type="file" id="node-photo-input" accept="image/*" class="hidden">
+                        <input type="file" id="node-photo-input" accept="image/*" capture="environment" class="hidden">
                     </label>
                     <button id="add-node-btn" class="px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold shadow-md hover:bg-indigo-700 transition-all text-sm">Зберегти вузол</button>
                 </div>
@@ -215,12 +215,13 @@
                 <div class="flex flex-wrap gap-2 items-center">
                     <label id="modal-photo-label" class="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer text-sm font-bold shadow-sm transition-colors text-slate-700">
                         📷 Додати фото
-                        <input type="file" id="modal-photo-input" accept="image/*" multiple class="hidden">
+                        <!-- Повернено capture="environment" -->
+                        <input type="file" id="modal-photo-input" accept="image/*" capture="environment" multiple class="hidden">
                     </label>
 
                     <label id="modal-video-label" class="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer text-sm font-bold shadow-sm transition-colors text-slate-700">
                         🎥 Додати відео
-                        <input type="file" id="modal-video-input" accept="video/*" class="hidden">
+                        <input type="file" id="modal-video-input" accept="video/*" capture="environment" class="hidden">
                     </label>
                 </div>
             </div>
@@ -240,7 +241,8 @@
         <div id="image-editor-container" class="flex-1 w-full bg-slate-900"></div>
     </div>
 
-    <!-- ПРИХОВАНИЙ ШАБЛОН ДЛЯ PDF (Оновлений для ідеального друку) -->
+    <!-- ПРИХОВАНИЙ ШАБЛОН ДЛЯ PDF -->
+    <!-- ЦЕЙ БЛОК БУДЕ ЄДИНИМ ВИДИМИМ ПІД ЧАС ДРУКУ -->
     <div id="pdf-template" class="hidden w-full max-w-4xl mx-auto p-8 bg-white text-black">
         <!-- Сторінка 1: Титульний аркуш інструкції -->
         <div class="pdf-cover-page flex flex-col justify-between" style="min-height: 290mm; box-sizing: border-box; padding-bottom: 40px;">
@@ -254,7 +256,6 @@
             </div>
             
             <div class="my-auto text-center" id="pdf-main-image-container">
-                <!-- Головне фото строго по центру, займає 1/3 сторінки -->
                 <img id="pdf-main-image" src="" style="height: 350px; max-height: 350px; object-fit: contain; width: 100%; border: 1px solid #000; padding: 4px; border-radius: 8px; display: inline-block;">
             </div>
             
@@ -264,15 +265,14 @@
         </div>
         
         <!-- Роздільник сторінки: Таблиця налаштувань почнеться на Сторінці 2 -->
-        <div class="page-break" style="page-break-before: always;"></div>
+        <div class="page-break"></div>
 
         <!-- Таблиця налаштувань (Сторінка 2+) -->
         <table class="pdf-table" id="pdf-table-content">
             <thead>
                 <tr>
-                    <th style="width: 30%; font-size: 13px; text-transform: uppercase;">Вузол / Частина обладнання</th>
-                    <th style="width: 45%; font-size: 13px; text-transform: uppercase;">Дія (налаштування)</th>
-                    <th style="width: 25%; font-size: 13px; text-transform: uppercase;">Фото</th>
+                    <th style="width: 30%;">Вузол / Частина обладнання</th>
+                    <th style="width: 70%;" colspan="2">Дія (налаштування)</th>
                 </tr>
             </thead>
             <tbody id="pdf-table-body"></tbody>
@@ -291,7 +291,6 @@
     <div id="toast" class="fixed top-5 right-5 left-5 sm:left-auto bg-slate-800 text-white py-3 px-6 rounded-xl shadow-2xl transform -translate-y-20 opacity-0 transition-all z-[110] font-bold text-center pointer-events-none"></div>
 
     <script>
-        // Посилання на Google Apps Script
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwzrXfxDRxrx4nMPEeHH0jgxGY9_uNv4Hdrx9ZhJVryjC_SHSnESC6_7-MqwOenxINIlQ/exec'; 
 
         let state = {
@@ -331,35 +330,11 @@
             setupButtons();
             setupModalButtons(); 
             setupNodeButton(); 
-            setupMobileClickFixes(); // Ініціалізація переадресації дотику для камери
             
             DOM.title.addEventListener('input', saveLocal);
             DOM.eq.addEventListener('input', saveLocal);
             
             renderNodes();
-        }
-
-        // Надійний фікс для кліків по фото в Sandbox iframe
-        function setupMobileClickFixes() {
-            const fixes = [
-                { labelId: 'main-photo-label', inputEl: DOM.mainImgInp },
-                { labelId: 'node-photo-label', inputEl: DOM.nodeImgInp },
-                { labelId: 'modal-photo-label', inputEl: DOM.modalPhotoInp },
-                { labelId: 'modal-video-label', inputEl: DOM.modalVideoInp }
-            ];
-            
-            fixes.forEach(fix => {
-                const label = document.getElementById(fix.labelId);
-                if (label && fix.inputEl) {
-                    label.addEventListener('click', (e) => {
-                        if (e.target !== fix.inputEl) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            fix.inputEl.click();
-                        }
-                    });
-                }
-            });
         }
 
         function showToast(msg, isError = false) {
@@ -484,7 +459,7 @@
                     defaultTabId: 'Annotate',
                     defaultToolId: 'Arrow',
                     annotationsCommon: { fill: '#ff0000', stroke: '#ff0000', strokeWidth: 3 },
-                    Text: { text: 'Ваш text', fontFamily: 'Arial', fonts: ['Arial', 'Times New Roman'] }
+                    Text: { text: 'Ваш текст', fontFamily: 'Arial', fonts: ['Arial', 'Times New Roman'] }
                 }
             );
             filerobotEditor.render();
@@ -495,7 +470,7 @@
             if (filerobotEditor) { filerobotEditor.terminate(); filerobotEditor = null; }
         };
 
-        // ================= ШІ ТА ГОЛОСОВИЙ ВВІД (ОНОВЛЕНИЙ - БЕЗ ЗАДВОЄННЯ СЛІВ) =================
+        // ================= ШІ ТА ГОЛОСОВИЙ ВВІД =================
         let isRec = false; 
         let sttTargetInput = null; 
         let sttTargetBtn = null;
@@ -516,7 +491,7 @@
                 sr.onstart = () => { 
                     isRec = true; 
                     if(sttTargetBtn) { 
-                        sttTargetBtn.classList.add('bg-red-100', 'text-red-700', 'border-red-300'); 
+                        sttTargetBtn.classList.add('bg-red-100', 'text-red-700'); 
                         sttTargetBtn.innerHTML = '🔴...'; 
                     }
                     showToast("🎤 Запис розпочато. Говоріть...");
@@ -526,7 +501,6 @@
                     let interimTranscript = '';
                     let finalTranscript = '';
                     
-                    // Повний збір згенерованого тексту з поточного буфера результатів
                     for (let i = 0; i < e.results.length; ++i) {
                         if (e.results[i].isFinal) {
                             finalTranscript += e.results[i][0].transcript;
@@ -566,7 +540,7 @@
 
         function resetSttButtonUI() {
             if (sttTargetBtn) {
-                sttTargetBtn.classList.remove('bg-red-100', 'text-red-700', 'border-red-300');
+                sttTargetBtn.classList.remove('bg-red-100', 'text-red-700');
                 if (sttTargetBtn.id === 'modal-stt-btn') {
                     sttTargetBtn.innerHTML = '🎙️ Голос';
                 } else {
@@ -784,39 +758,77 @@
             if (DOM.setApi) DOM.setApi.addEventListener('input', () => DOM.keyStatusMsg.classList.add('hidden'));
         }
 
+        // --- ГЕНЕРАЦІЯ ДИЗАЙНУ ТАБЛИЦІ PDF ЗІ ЗРАЗКУ ---
         function generatePDFHtml() {
             document.getElementById('pdf-doc-title').textContent = state.title || 'Інструкція з налаштування';
             document.getElementById('pdf-doc-eq').textContent = state.equipment ? `Обладнання: ${state.equipment}` : '';
             const pdfMain = document.getElementById('pdf-main-image');
             if(state.mainImage) { pdfMain.src = state.mainImage; pdfMain.style.display = 'inline-block'; } else { pdfMain.style.display = 'none'; }
-            const tbody = document.getElementById('pdf-table-body'); tbody.innerHTML = '';
+            
+            const tbody = document.getElementById('pdf-table-body'); 
+            tbody.innerHTML = '';
             
             state.nodes.forEach(node => {
                 if (!node.steps || node.steps.length === 0) {
                     let tr = document.createElement('tr');
-                    let tdNode = document.createElement('td'); tdNode.innerHTML = `<strong style="font-size:14px; color:#0f172a;">${node.title}</strong><br><span style="font-size:11px; color:#475569; display:block; margin-top:4px;">${node.desc||''}</span>`;
-                    if(node.image) tdNode.innerHTML += `<br><img src="${node.image}" class="pdf-node-img">`;
-                    
+                    let tdNode = document.createElement('td'); 
+                    tdNode.innerHTML = `<strong style="font-size:16px; color:#0f172a;">${node.title}</strong><br><span style="font-size:12px; color:#475569; display:block; margin-top:4px;">${node.desc||''}</span>`;
+                    if(node.image) tdNode.innerHTML += `<br><img src="${node.image}" style="max-width: 100%; max-height: 200px; object-fit: contain; margin-top: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">`;
                     tr.appendChild(tdNode); 
-                    tr.appendChild(document.createElement('td')); 
-                    tr.appendChild(document.createElement('td')); 
+                    
+                    let tdEmpty = document.createElement('td');
+                    tdEmpty.colSpan = 2;
+                    tr.appendChild(tdEmpty); 
                     tbody.appendChild(tr);
                 } else {
                     node.steps.forEach((step, idx) => {
                         let tr = document.createElement('tr');
-                        // Вузол додаємо тільки до першого кроку для rowSpan
+                        
+                        // Вузол додаємо лише до першого кроку для об'єднання комірок (rowSpan)
                         if (idx === 0) {
-                            let tdNode = document.createElement('td'); tdNode.rowSpan = node.steps.length;
-                            tdNode.innerHTML = `<strong style="font-size:14px; color:#0f172a;">${node.title}</strong><br><span style="font-size:11px; color:#475569; display:block; margin-top:4px;">${node.desc||''}</span>`;
-                            if(node.image) tdNode.innerHTML += `<br><img src="${node.image}" class="pdf-node-img">`;
+                            let tdNode = document.createElement('td'); 
+                            tdNode.rowSpan = node.steps.length;
+                            tdNode.style.width = "30%";
+                            tdNode.innerHTML = `<strong style="font-size:16px; color:#0f172a;">${node.title}</strong><br><span style="font-size:12px; color:#475569; display:block; margin-top:4px;">${node.desc||''}</span>`;
+                            if(node.image) tdNode.innerHTML += `<br><img src="${node.image}" style="max-width: 100%; max-height: 200px; object-fit: contain; margin-top: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">`;
                             tr.appendChild(tdNode);
                         }
-                        let tdAction = document.createElement('td'); tdAction.innerHTML = step.text ? step.text.replace(/\n/g, '<br>') : '';
-                        let tdPhotos = document.createElement('td');
+                        
+                        // Комірка Дії (Об'єднана з фото для красивого дизайну з лінією)
+                        let tdContent = document.createElement('td'); 
+                        tdContent.style.width = "70%";
+                        tdContent.colSpan = 2;
+                        
+                        let imagesHtml = '';
                         if (step.images && step.images.length) {
-                            tdPhotos.innerHTML = step.images.map(img => `<img src="${img}" class="pdf-step-img">`).join('');
+                            imagesHtml = `<div style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px;">` + 
+                                         step.images.map(img => `<img src="${img}" style="max-height: 200px; max-width: 100%; border-radius: 8px; border: 1px solid #e2e8f0; object-fit: contain;">`).join('') + 
+                                         `</div>`;
                         }
-                        tr.appendChild(tdAction); tr.appendChild(tdPhotos); tbody.appendChild(tr);
+
+                        // Дизайн зеленої лінії та кружечка
+                        tdContent.innerHTML = `
+                            <div style="position: relative; padding-left: 42px; min-height: 40px; padding-bottom: 8px;">
+                                <!-- Вертикальна зелена лінія -->
+                                <div style="position: absolute; left: 14px; top: 32px; bottom: 0; width: 2px; background-color: #10b981;"></div>
+                                
+                                <!-- Круглий номер -->
+                                <div style="position: absolute; left: 0; top: 0; width: 30px; height: 30px; border-radius: 50%; border: 2px solid #e2e8f0; background: white; color: #475569; font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 2;">
+                                    ${idx + 1}
+                                </div>
+                                
+                                <!-- Текст кроку -->
+                                <div style="font-size: 15px; color: #1e293b; font-weight: 600; line-height: 1.5; padding-top: 4px;">
+                                    ${step.text ? step.text.replace(/\n/g, '<br>') : ''}
+                                </div>
+                                
+                                <!-- Фотографії -->
+                                ${imagesHtml}
+                            </div>
+                        `;
+                        
+                        tr.appendChild(tdContent); 
+                        tbody.appendChild(tr);
                     });
                 }
             });
@@ -825,7 +837,12 @@
         function setupButtons() {
             if(DOM.saveSetBtn) DOM.saveSetBtn.onclick = () => { state.settings = { email: DOM.setEmail.value.trim(), driveId: DOM.setDrive.value.trim(), apiKey: DOM.setApi.value.trim() }; saveLocal(); showToast("Налаштування успішно збережено"); };
             if(DOM.btnNewDoc) DOM.btnNewDoc.onclick = () => { state.docId = crypto.randomUUID(); state.title = ''; state.equipment = ''; state.mainImage = null; state.nodes = []; DOM.title.value = ''; DOM.eq.value = ''; saveLocal(); DOM.tabEd.click(); };
-            if(DOM.pdfBtn) DOM.pdfBtn.onclick = () => { saveLocal(); generatePDFHtml(); document.body.classList.add('pdf-export-mode'); setTimeout(() => { window.print(); document.body.classList.remove('pdf-export-mode'); }, 500); };
+            if(DOM.pdfBtn) DOM.pdfBtn.onclick = () => { 
+                saveLocal(); 
+                generatePDFHtml(); 
+                document.body.classList.add('pdf-export-mode'); 
+                setTimeout(() => { window.print(); document.body.classList.remove('pdf-export-mode'); }, 500); 
+            };
             if(DOM.emailBtn) DOM.emailBtn.onclick = async () => {
                 saveLocal();
                 if(!state.title || !state.nodes.length) return showToast("Спочатку створіть інструкцію", true);
