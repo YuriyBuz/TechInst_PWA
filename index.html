@@ -41,9 +41,7 @@
         .pdf-node-img { max-width: 100%; max-height: 250px; object-fit: contain; margin-top: 10px; display: block; }
         .pdf-step-img { max-width: 160px; max-height: 160px; object-fit: contain; margin: 4px; border: 1px solid #e2e8f0; border-radius: 4px; }
         
-        /* Головне фото займає ~1/3 аркуша А4 (А4 ~ 1122px висотою) */
         #pdf-main-image { width: 100%; height: 350px; object-fit: contain; margin-bottom: 20px; }
-        
         .page-break { page-break-before: always; }
     </style>
 </head>
@@ -75,7 +73,6 @@
         <!-- ================= EDITOR TAB ================= -->
         <div id="view-editor" class="fade-in space-y-6">
             
-            <!-- Документ: Шапка -->
             <div class="card p-4 sm:p-6 rounded-2xl shadow-sm border-t-4 border-t-emerald-500">
                 <input type="text" id="doc-title" placeholder="Назва інструкції..." class="w-full text-xl sm:text-2xl font-bold text-slate-800 placeholder-slate-300 bg-transparent border-b border-transparent focus:border-emerald-500 transition-colors py-1 outline-none mb-3">
                 <div class="flex items-center gap-2 text-slate-600 border-b border-slate-100 pb-3 mb-3">
@@ -83,7 +80,6 @@
                     <input type="text" id="doc-eq" placeholder="Вкажіть лінію..." class="flex-1 text-base outline-none placeholder-slate-300 bg-transparent">
                 </div>
                 
-                <!-- Головне фото обладнання -->
                 <div>
                     <label class="block text-sm font-bold text-slate-600 mb-2">Загальне фото обладнання (1/3 аркуша А4):</label>
                     <div id="main-image-preview-container" class="hidden mb-3 relative inline-block">
@@ -97,12 +93,10 @@
                 </div>
             </div>
 
-            <!-- Контейнер для Вузлів -->
-            <div id="nodes-container" class="space-y-6">
-                <!-- Вузли будуть рендеритись тут -->
-            </div>
+            <!-- Вузли -->
+            <div id="nodes-container" class="space-y-6"></div>
 
-            <!-- Форма створення нового ВУЗЛА -->
+            <!-- Форма створення ВУЗЛА -->
             <div id="action-card-node" class="card p-4 sm:p-5 rounded-2xl shadow-md border border-indigo-100 bg-indigo-50/30 relative mt-8">
                 <div class="flex justify-between items-center mb-3">
                     <h3 class="font-bold text-indigo-800 flex items-center gap-2">🛠️ Додати новий вузол/частину</h3>
@@ -153,8 +147,10 @@
                         <label class="block text-xs font-bold text-purple-700 mb-1">ШІ Ключ (Gemini API)</label>
                         <div class="flex gap-2">
                             <input type="password" id="set-api-key" class="input-field" placeholder="AIzaSy...">
+                            <button id="check-key-btn" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-colors shrink-0">Перевірити</button>
                             <button id="save-settings-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-colors">Зберегти</button>
                         </div>
+                        <div id="key-status-msg" class="mt-2 text-xs font-bold flex items-center gap-1.5 hidden"></div>
                     </div>
                 </div>
             </div>
@@ -166,22 +162,19 @@
     <div id="step-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 class="font-bold text-slate-800">Додати дію/налаштування</h3>
+                <h3 class="font-bold text-slate-800">Додати дію (налаштування)</h3>
                 <button id="close-step-modal" class="text-slate-400 hover:text-red-500 font-bold text-xl transition-colors">✕</button>
             </div>
             <div class="p-4 overflow-y-auto space-y-4">
                 <textarea id="modal-step-text" rows="4" class="input-field resize-none" placeholder="Опишіть дію (або надиктуйте голосом)..."></textarea>
                 
-                <!-- Прев'ю Фото -->
                 <div id="modal-media-preview" class="hidden flex flex-wrap gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200"></div>
                 
-                <!-- Прев'ю Відео -->
                 <div id="modal-video-preview" class="hidden flex items-center justify-between gap-2 text-sm font-bold text-indigo-600 bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-200">
                     <span>🎥 Відео додано</span>
                     <button id="remove-modal-video" class="text-indigo-400 hover:text-red-500 text-lg">✕</button>
                 </div>
 
-                <!-- Кнопки медіа -->
                 <div class="flex flex-wrap gap-2 items-center">
                     <button id="modal-stt-btn" class="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold shadow-sm transition-colors text-slate-700">🎙️ Голос</button>
                     
@@ -205,13 +198,12 @@
         </div>
     </div>
 
-    <!-- ПРИХОВАНИЙ ШАБЛОН ДЛЯ PDF (Таблиця як на фото) -->
+    <!-- ПРИХОВАНИЙ ШАБЛОН ДЛЯ PDF -->
     <div id="pdf-template" class="hidden w-full max-w-4xl mx-auto p-8 bg-white">
         <h1 id="pdf-doc-title" class="text-3xl font-bold text-center mb-2 text-slate-900"></h1>
         <h3 id="pdf-doc-eq" class="text-xl text-center text-slate-600 mb-6 font-medium"></h3>
         
         <div class="mb-8 text-center">
-            <!-- 1/3 аркуша А4 = 350px -->
             <img id="pdf-main-image" src="" style="height: 350px; max-height: 350px; object-fit: contain; width: 100%; display: none;">
         </div>
 
@@ -223,9 +215,7 @@
                     <th style="width: 25%;">Фото</th>
                 </tr>
             </thead>
-            <tbody id="pdf-table-body">
-                <!-- Контент генерується через JS -->
-            </tbody>
+            <tbody id="pdf-table-body"></tbody>
         </table>
     </div>
 
@@ -238,46 +228,38 @@
         </div>
     </footer>
 
-    <!-- Toast -->
     <div id="toast" class="fixed top-5 right-5 left-5 sm:left-auto bg-slate-800 text-white py-3 px-6 rounded-xl shadow-2xl transform -translate-y-20 opacity-0 transition-all z-[60] font-bold text-center pointer-events-none"></div>
 
     <script>
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwzrXfxDRxrx4nMPEeHH0jgxGY9_uNv4Hdrx9ZhJVryjC_SHSnESC6_7-MqwOenxINIlQ/exec'; 
 
-        // Стан додатку: Ієрархія (Nodes -> Steps)
         let state = {
-            docId: crypto.randomUUID(),
-            title: '', equipment: '', mainImage: null,
-            nodes: [], // { id, title, desc, image, steps: [{ id, text, images, videoUrl }] }
-            archive: [],
+            docId: crypto.randomUUID(), title: '', equipment: '', mainImage: null,
+            nodes: [], archive: [],
             settings: { email: 'Buznitskiy7@gmail.com', driveId: '', apiKey: '' }
         };
 
-        // Тимчасові змінні для форм
-        let tempNodeImage = null;
-        let activeNodeIdForStep = null; 
-        let tempStepImages = [];
-        let tempStepVideoUrl = null;
-        let editingStepId = null; 
+        let tempNodeImage = null; let activeNodeIdForStep = null; 
+        let tempStepImages = []; let tempStepVideoUrl = null; let editingStepId = null; 
+        let DOM = {}; // Ініціалізується після завантаження
 
-        const DOM = {
-            date: document.getElementById('current-date'),
-            toast: document.getElementById('toast'),
-            tabEd: document.getElementById('tab-editor'), tabAr: document.getElementById('tab-archive'), tabSet: document.getElementById('tab-settings'),
-            viewEd: document.getElementById('view-editor'), viewAr: document.getElementById('view-archive'), viewSet: document.getElementById('view-settings'),
-            
-            title: document.getElementById('doc-title'), eq: document.getElementById('doc-eq'),
-            mainImgInp: document.getElementById('main-photo-input'), mainImgPrev: document.getElementById('main-image-preview'), mainImgBox: document.getElementById('main-image-preview-container'), removeMainImg: document.getElementById('remove-main-img'),
-            nodesCont: document.getElementById('nodes-container'),
-            
-            nodeTitle: document.getElementById('node-title'), nodeDesc: document.getElementById('node-desc'), nodeImgInp: document.getElementById('node-photo-input'), nodeImgPrevBox: document.getElementById('node-img-preview-box'), nodeImgPrev: document.getElementById('node-img-preview'), removeNodeImg: document.getElementById('remove-node-img'), addNodeBtn: document.getElementById('add-node-btn'),
-            
-            stepModal: document.getElementById('step-modal'), closeStepModal: document.getElementById('close-step-modal'), modalText: document.getElementById('modal-step-text'), modalPhotoInp: document.getElementById('modal-photo-input'), modalMediaPrev: document.getElementById('modal-media-preview'), modalVideoInp: document.getElementById('modal-video-input'), modalVideoPrev: document.getElementById('modal-video-preview'), removeModalVideo: document.getElementById('remove-modal-video'), modalSttBtn: document.getElementById('modal-stt-btn'), modalAiBtn: document.getElementById('modal-ai-btn'), modalSaveBtn: document.getElementById('modal-save-btn'), modalClearBtn: document.getElementById('modal-clear-btn'),
-            
-            setEmail: document.getElementById('set-email'), setDrive: document.getElementById('set-drive'), setApi: document.getElementById('set-api-key'), saveSetBtn: document.getElementById('save-settings-btn')
-        };
+        function initDOM() {
+            DOM = {
+                date: document.getElementById('current-date'), toast: document.getElementById('toast'),
+                tabEd: document.getElementById('tab-editor'), tabAr: document.getElementById('tab-archive'), tabSet: document.getElementById('tab-settings'),
+                viewEd: document.getElementById('view-editor'), viewAr: document.getElementById('view-archive'), viewSet: document.getElementById('view-settings'),
+                title: document.getElementById('doc-title'), eq: document.getElementById('doc-eq'),
+                mainImgInp: document.getElementById('main-photo-input'), mainImgPrev: document.getElementById('main-image-preview'), mainImgBox: document.getElementById('main-image-preview-container'), removeMainImg: document.getElementById('remove-main-img'),
+                nodesCont: document.getElementById('nodes-container'), nodeTitle: document.getElementById('node-title'), nodeDesc: document.getElementById('node-desc'), nodeImgInp: document.getElementById('node-photo-input'), nodeImgPrevBox: document.getElementById('node-img-preview-box'), nodeImgPrev: document.getElementById('node-img-preview'), removeNodeImg: document.getElementById('remove-node-img'), addNodeBtn: document.getElementById('add-node-btn'),
+                stepModal: document.getElementById('step-modal'), closeStepModal: document.getElementById('close-step-modal'), modalText: document.getElementById('modal-step-text'), modalPhotoInp: document.getElementById('modal-photo-input'), modalMediaPrev: document.getElementById('modal-media-preview'), modalVideoInp: document.getElementById('modal-video-input'), modalVideoPrev: document.getElementById('modal-video-preview'), removeModalVideo: document.getElementById('remove-modal-video'), modalSttBtn: document.getElementById('modal-stt-btn'), modalAiBtn: document.getElementById('modal-ai-btn'), modalSaveBtn: document.getElementById('modal-save-btn'), modalClearBtn: document.getElementById('modal-clear-btn'),
+                setEmail: document.getElementById('set-email'), setDrive: document.getElementById('set-drive'), setApi: document.getElementById('set-api-key'), saveSetBtn: document.getElementById('save-settings-btn'), checkKeyBtn: document.getElementById('check-key-btn'), keyStatusMsg: document.getElementById('key-status-msg'),
+                saveBtn: document.getElementById('save-sheets-btn'), emailBtn: document.getElementById('email-btn'), pdfBtn: document.getElementById('pdf-btn'),
+                archiveList: document.getElementById('archive-list'), btnNewDoc: document.getElementById('btn-new-doc')
+            };
+        }
 
         function initApp() {
+            initDOM();
             DOM.date.textContent = new Date().toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' }); 
             loadData();
             setupTabs();
@@ -286,7 +268,6 @@
             setupAI();
             setupButtons();
             
-            // Автозбереження при введенні тексту
             DOM.title.addEventListener('input', saveLocal);
             DOM.eq.addEventListener('input', saveLocal);
             
@@ -300,7 +281,6 @@
             setTimeout(() => { DOM.toast.style.opacity = '0'; DOM.toast.style.transform = 'translateY(-2rem)'; }, 3000);
         }
 
-        // ================= ТАБИ =================
         function setupTabs() {
             const actCls = "flex-1 py-2 rounded-lg bg-white text-emerald-700 font-bold shadow-sm transition-all text-xs sm:text-sm";
             const inactCls = "flex-1 py-2 rounded-lg text-slate-600 font-medium hover:bg-slate-300 transition-all text-xs sm:text-sm";
@@ -319,13 +299,13 @@
                 if (pass === "5588") {
                     hideAll(); DOM.viewSet.classList.remove('hidden'); DOM.tabSet.className = actCls;
                     DOM.setEmail.value = state.settings.email; DOM.setDrive.value = state.settings.driveId; DOM.setApi.value = state.settings.apiKey;
+                    DOM.keyStatusMsg.classList.add('hidden');
                 } else {
                     if (pass !== null) showToast("Невірний пароль!", true);
                 }
             };
         }
 
-        // ================= ФОТО/ВІДЕО (Стиснення) =================
         function processImageFile(file, callback) {
             if (!file) return;
             const reader = new FileReader();
@@ -333,7 +313,7 @@
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const MAX = 800; // Стиснення
+                    const MAX = 800; 
                     const scale = Math.min(MAX / img.width, MAX / img.height, 1);
                     canvas.width = img.width * scale; canvas.height = img.height * scale;
                     const ctx = canvas.getContext('2d');
@@ -346,42 +326,14 @@
         }
 
         function setupMediaInputs() {
-            // Головне фото
-            DOM.mainImgInp.onchange = (e) => {
-                processImageFile(e.target.files[0], (dataUrl) => {
-                    state.mainImage = dataUrl;
-                    DOM.mainImgPrev.src = dataUrl; DOM.mainImgBox.classList.remove('hidden');
-                });
-            };
-            DOM.removeMainImg.onclick = () => { state.mainImage = null; DOM.mainImgBox.classList.add('hidden'); DOM.mainImgPrev.src = ''; DOM.mainImgInp.value = ''; };
+            DOM.mainImgInp.onchange = (e) => { processImageFile(e.target.files[0], (dataUrl) => { state.mainImage = dataUrl; DOM.mainImgPrev.src = dataUrl; DOM.mainImgBox.classList.remove('hidden'); saveLocal(); }); };
+            DOM.removeMainImg.onclick = () => { state.mainImage = null; DOM.mainImgBox.classList.add('hidden'); DOM.mainImgPrev.src = ''; DOM.mainImgInp.value = ''; saveLocal(); };
 
-            // Фото Вузла
-            DOM.nodeImgInp.onchange = (e) => {
-                processImageFile(e.target.files[0], (dataUrl) => {
-                    tempNodeImage = dataUrl;
-                    DOM.nodeImgPrev.src = dataUrl; DOM.nodeImgPrevBox.classList.remove('hidden');
-                });
-            };
+            DOM.nodeImgInp.onchange = (e) => { processImageFile(e.target.files[0], (dataUrl) => { tempNodeImage = dataUrl; DOM.nodeImgPrev.src = dataUrl; DOM.nodeImgPrevBox.classList.remove('hidden'); }); };
             DOM.removeNodeImg.onclick = () => { tempNodeImage = null; DOM.nodeImgPrevBox.classList.add('hidden'); DOM.nodeImgInp.value = ''; };
 
-            // Фото Кроку (Множинне)
-            DOM.modalPhotoInp.onchange = (e) => {
-                Array.from(e.target.files).forEach(file => {
-                    processImageFile(file, (dataUrl) => {
-                        tempStepImages.push(dataUrl);
-                        updateModalMediaUI();
-                    });
-                });
-                DOM.modalPhotoInp.value = '';
-            };
-
-            // Відео Кроку
-            DOM.modalVideoInp.onchange = (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                tempStepVideoUrl = URL.createObjectURL(file);
-                DOM.modalVideoPrev.classList.remove('hidden');
-            };
+            DOM.modalPhotoInp.onchange = (e) => { Array.from(e.target.files).forEach(f => { processImageFile(f, (d) => { tempStepImages.push(d); updateModalMediaUI(); }); }); DOM.modalPhotoInp.value = ''; };
+            DOM.modalVideoInp.onchange = (e) => { const f = e.target.files[0]; if(f) { tempStepVideoUrl = URL.createObjectURL(f); DOM.modalVideoPrev.classList.remove('hidden'); } };
             DOM.removeModalVideo.onclick = () => { tempStepVideoUrl = null; DOM.modalVideoPrev.classList.add('hidden'); DOM.modalVideoInp.value = ''; };
         }
 
@@ -394,32 +346,26 @@
                         <button onclick="removeTempStepImage(${i})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold text-xs shadow hover:bg-red-600">✕</button>
                     </div>
                 `).join('');
-            } else {
-                DOM.modalMediaPrev.classList.add('hidden'); DOM.modalMediaPrev.innerHTML = '';
-            }
+            } else { DOM.modalMediaPrev.classList.add('hidden'); DOM.modalMediaPrev.innerHTML = ''; }
         }
         window.removeTempStepImage = (idx) => { tempStepImages.splice(idx, 1); updateModalMediaUI(); };
 
-        // ================= РЕНДЕР ВУЗЛІВ ТА КРОКІВ =================
-        DOM.addNodeBtn.onclick = () => {
+        DOM.addNodeBtn = document.getElementById('add-node-btn'); // Fallback ensure
+        if (DOM.addNodeBtn) DOM.addNodeBtn.onclick = () => {
             const t = DOM.nodeTitle.value.trim();
             if(!t && !tempNodeImage) return showToast("Введіть назву вузла або додайте фото", true);
-            
             state.nodes.push({ id: crypto.randomUUID(), title: t, desc: DOM.nodeDesc.value.trim(), image: tempNodeImage, steps: [] });
-            
             DOM.nodeTitle.value = ''; DOM.nodeDesc.value = ''; tempNodeImage = null; DOM.nodeImgPrevBox.classList.add('hidden');
             renderNodes(); saveLocal();
         };
 
         function renderNodes() {
             DOM.title.value = state.title; DOM.eq.value = state.equipment;
-            if(state.mainImage) { DOM.mainImgPrev.src = state.mainImage; DOM.mainImgBox.classList.remove('hidden'); }
-            else { DOM.mainImgBox.classList.add('hidden'); }
+            if(state.mainImage) { DOM.mainImgPrev.src = state.mainImage; DOM.mainImgBox.classList.remove('hidden'); } else { DOM.mainImgBox.classList.add('hidden'); }
             
             DOM.nodesCont.innerHTML = state.nodes.map((node, nIdx) => `
                 <div class="card p-4 sm:p-5 rounded-2xl shadow-sm border-l-4 border-l-indigo-500 relative bg-white">
                     <button onclick="confirmDeleteNode('${node.id}')" class="absolute top-3 right-3 text-slate-300 hover:text-red-500 bg-red-50 p-2 rounded-lg transition-colors" title="Видалити вузол">🗑️</button>
-                    
                     <div class="flex flex-col sm:flex-row gap-4 mb-4 border-b border-slate-100 pb-4">
                         ${node.image ? `<img src="${node.image}" class="w-full sm:w-1/3 max-w-[200px] h-32 object-cover rounded-xl shadow-sm border border-slate-200">` : ''}
                         <div class="flex-1 pr-10">
@@ -427,13 +373,11 @@
                             ${node.desc ? `<p class="text-slate-600 text-sm mt-1 whitespace-pre-wrap">${node.desc}</p>` : ''}
                         </div>
                     </div>
-
                     <div class="space-y-3 pl-2 sm:pl-6">
                         ${node.steps.map((step, sIdx) => `
                             <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 relative group">
                                 <button onclick="editStep('${node.id}', '${step.id}')" class="absolute top-2 right-12 text-slate-400 hover:text-emerald-500 bg-white p-1.5 rounded shadow-sm transition-colors" title="Редагувати">✏️</button>
                                 <button onclick="confirmDeleteStep('${node.id}', '${step.id}')" class="absolute top-2 right-2 text-slate-400 hover:text-red-500 bg-white p-1.5 rounded shadow-sm transition-colors" title="Видалити">🗑️</button>
-                                
                                 <div class="flex gap-3 items-start mt-4 sm:mt-0">
                                     <span class="bg-emerald-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow">${sIdx+1}</span>
                                     <div class="flex-1 pr-4">
@@ -444,7 +388,6 @@
                                 </div>
                             </div>
                         `).join('')}
-                        
                         <button onclick="openStepModal('${node.id}')" class="mt-4 text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl flex items-center gap-2 transition-colors border border-indigo-100">
                             ➕ Додати дію (налаштування)
                         </button>
@@ -453,112 +396,107 @@
             `).join('');
         }
 
-        window.confirmDeleteNode = (id) => { if(confirm("Ви впевнені, що хочете видалити цей вузол та всі його кроки?")) { state.nodes = state.nodes.filter(n=>n.id!==id); renderNodes(); saveLocal(); } };
-        window.confirmDeleteStep = (nId, sId) => { 
-            if(confirm("Ви впевнені, що хочете видалити цей крок?")) { 
-                const node = state.nodes.find(n=>n.id===nId); 
-                if(node) { node.steps = node.steps.filter(s=>s.id!==sId); renderNodes(); saveLocal(); } 
-            } 
-        };
+        window.confirmDeleteNode = (id) => { if(confirm("Видалити цей вузол та всі його кроки?")) { state.nodes = state.nodes.filter(n=>n.id!==id); renderNodes(); saveLocal(); } };
+        window.confirmDeleteStep = (nId, sId) => { if(confirm("Видалити цей крок?")) { const node = state.nodes.find(n=>n.id===nId); if(node) { node.steps = node.steps.filter(s=>s.id!==sId); renderNodes(); saveLocal(); } } };
 
-        // ================= МОДАЛКА КРОКУ =================
         window.openStepModal = (nodeId) => {
             activeNodeIdForStep = nodeId; editingStepId = null;
             DOM.modalText.value = ''; tempStepImages = []; tempStepVideoUrl = null; 
-            updateModalMediaUI(); DOM.modalVideoPrev.classList.add('hidden');
-            DOM.stepModal.classList.remove('hidden');
+            updateModalMediaUI(); DOM.modalVideoPrev.classList.add('hidden'); DOM.stepModal.classList.remove('hidden');
         };
         
         window.editStep = (nId, sId) => {
             activeNodeIdForStep = nId; editingStepId = sId;
             const step = state.nodes.find(n=>n.id===nId).steps.find(s=>s.id===sId);
-            DOM.modalText.value = step.text || '';
-            tempStepImages = step.images ? [...step.images] : [];
-            tempStepVideoUrl = step.videoUrl || null;
-            
-            updateModalMediaUI();
-            if(tempStepVideoUrl) DOM.modalVideoPrev.classList.remove('hidden'); else DOM.modalVideoPrev.classList.add('hidden');
+            DOM.modalText.value = step.text || ''; tempStepImages = step.images ? [...step.images] : []; tempStepVideoUrl = step.videoUrl || null;
+            updateModalMediaUI(); if(tempStepVideoUrl) DOM.modalVideoPrev.classList.remove('hidden'); else DOM.modalVideoPrev.classList.add('hidden');
             DOM.stepModal.classList.remove('hidden');
         };
         
-        DOM.closeStepModal.onclick = () => DOM.stepModal.classList.add('hidden');
-        DOM.modalClearBtn.onclick = () => { 
-            DOM.modalText.value = ''; tempStepImages = []; tempStepVideoUrl = null; 
-            updateModalMediaUI(); DOM.modalVideoPrev.classList.add('hidden'); 
-        };
+        if(DOM.closeStepModal) DOM.closeStepModal.onclick = () => DOM.stepModal.classList.add('hidden');
+        if(DOM.modalClearBtn) DOM.modalClearBtn.onclick = () => { DOM.modalText.value = ''; tempStepImages = []; tempStepVideoUrl = null; updateModalMediaUI(); DOM.modalVideoPrev.classList.add('hidden'); };
         
-        DOM.modalSaveBtn.onclick = () => {
+        if(DOM.modalSaveBtn) DOM.modalSaveBtn.onclick = () => {
             const txt = DOM.modalText.value.trim();
             if(!txt && !tempStepImages.length && !tempStepVideoUrl) return showToast("Додайте текст, фото або відео", true);
-            
             const node = state.nodes.find(n=>n.id===activeNodeIdForStep);
             if(node) {
                 if(editingStepId) {
                     const step = node.steps.find(s=>s.id===editingStepId);
                     step.text = txt; step.images = [...tempStepImages]; step.videoUrl = tempStepVideoUrl;
-                } else {
-                    node.steps.push({ id: crypto.randomUUID(), text: txt, images: [...tempStepImages], videoUrl: tempStepVideoUrl });
-                }
+                } else { node.steps.push({ id: crypto.randomUUID(), text: txt, images: [...tempStepImages], videoUrl: tempStepVideoUrl }); }
                 DOM.stepModal.classList.add('hidden'); renderNodes(); saveLocal();
             }
         };
 
-        // ================= ШІ ТА ГОЛОС =================
-        let isRec = false;
-        let originalSessionText = '';
+        let isRec = false; let originalSessionText = '';
         const sr = window.SpeechRecognition || window.webkitSpeechRecognition ? new (window.SpeechRecognition || window.webkitSpeechRecognition)() : null;
         if(sr) { sr.lang = 'uk-UA'; sr.continuous = true; sr.interimResults = true; }
 
-        DOM.modalSttBtn.onclick = () => {
-            if(!sr) return showToast("Голосовий ввід не підтримується цим браузером", true);
-            if(isRec) { sr.stop(); } else { sr.start(); }
-        };
-        
-        if(sr) {
-            sr.onstart = () => { 
-                isRec = true; 
-                originalSessionText = DOM.modalText.value.trim();
-                DOM.modalSttBtn.classList.add('bg-red-100', 'text-red-700'); DOM.modalSttBtn.innerHTML = '🔴 Слухаю...'; 
+        function setupSpeechToText() {
+            if(DOM.modalSttBtn) DOM.modalSttBtn.onclick = () => {
+                if(!sr) return showToast("Голосовий ввід не підтримується браузером", true);
+                if(isRec) { sr.stop(); } else { sr.start(); }
             };
-            sr.onresult = (e) => {
-                let res = ''; for (let i = 0; i < e.results.length; ++i) res += e.results[i][0].transcript;
-                DOM.modalText.value = originalSessionText ? `${originalSessionText} ${res}` : res;
-            };
-            sr.onend = () => { 
-                isRec = false; 
-                DOM.modalSttBtn.classList.remove('bg-red-100', 'text-red-700'); DOM.modalSttBtn.innerHTML = '🎙️ Голос'; 
-            };
-            sr.onerror = (e) => { console.error('Помилка мікрофона:', e); };
+            if(sr) {
+                sr.onstart = () => { isRec = true; originalSessionText = DOM.modalText.value.trim(); DOM.modalSttBtn.classList.add('bg-red-100', 'text-red-700'); DOM.modalSttBtn.innerHTML = '🔴 Слухаю...'; };
+                sr.onresult = (e) => { let res = ''; for (let i = 0; i < e.results.length; ++i) res += e.results[i][0].transcript; DOM.modalText.value = originalSessionText ? `${originalSessionText} ${res}` : res; };
+                sr.onend = () => { isRec = false; DOM.modalSttBtn.classList.remove('bg-red-100', 'text-red-700'); DOM.modalSttBtn.innerHTML = '🎙️ Голос'; };
+                sr.onerror = (e) => { console.error('Помилка мікрофона:', e); };
+            }
+        }
+
+        async function checkApiKey() {
+            const key = DOM.setApi.value.trim();
+            const statusEl = DOM.keyStatusMsg;
+            if (!key) {
+                statusEl.className = 'mt-2 text-xs font-bold flex items-center gap-1.5 text-red-600';
+                statusEl.innerHTML = '⚠️ Ключ не введено'; statusEl.classList.remove('hidden'); return;
+            }
+            statusEl.className = 'mt-2 text-xs font-bold flex items-center gap-1.5 text-slate-500';
+            statusEl.innerHTML = '⏳ З\'єднуюсь з серверами Google...'; statusEl.classList.remove('hidden');
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+                const data = await res.json();
+                if (res.ok && data.models) {
+                    const modelsCount = data.models.filter(m => m.name.includes("gemini")).length;
+                    statusEl.className = 'mt-2 text-xs font-bold flex items-center gap-1.5 text-green-600';
+                    statusEl.innerHTML = `✅ Супер! Ключ дійсний. Доступно моделей: ${modelsCount}`;
+                    state.settings.apiKey = key; saveLocal();
+                } else {
+                    statusEl.className = 'mt-2 text-xs font-bold flex items-center gap-1.5 text-red-600';
+                    statusEl.innerHTML = `⚠️ Помилка доступу: ${data.error?.message || 'Невідома помилка'}`;
+                }
+            } catch (e) {
+                statusEl.className = 'mt-2 text-xs font-bold flex items-center gap-1.5 text-red-600';
+                statusEl.innerHTML = '⚠️ Помилка мережі при перевірці.';
+            }
         }
 
         function setupAI() {
-            DOM.modalAiBtn.onclick = async () => {
+            if (DOM.checkKeyBtn) DOM.checkKeyBtn.onclick = checkApiKey;
+            if (DOM.setApi) DOM.setApi.addEventListener('input', () => { DOM.keyStatusMsg.classList.add('hidden'); });
+
+            if(DOM.modalAiBtn) DOM.modalAiBtn.onclick = async () => {
                 const txt = DOM.modalText.value.trim();
                 if(!txt) return showToast("Спочатку напишіть або надиктуйте текст", true);
-                const key = state.settings.apiKey;
-                if(!key) return showToast("Додайте ключ Gemini API в Налаштуваннях", true);
+                
+                let activeKey = state.settings.apiKey;
+                const isProd = window.location.hostname !== "localhost" && window.location.hostname !== "";
+                if(!activeKey && isProd) { showToast("Потрібен API Ключ! Перейдіть в 'Налаштування'", true); return DOM.tabSet.click(); }
                 
                 DOM.modalAiBtn.innerHTML = "⏳..."; DOM.modalAiBtn.disabled = true;
                 try {
-                    let activeKey = key.trim();
                     let usedModel = "gemini-2.5-flash-preview-09-2025"; 
-                    
                     if (activeKey !== "") {
                         try {
                             const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${activeKey}`);
                             if (res.ok) {
                                 const data = await res.json();
-                                const availableModels = data.models
-                                    .filter(m => m.supportedGenerationMethods?.includes("generateContent") && m.name.includes("gemini"))
-                                    .map(m => m.name.replace('models/', ''));
-                                    
-                                if (availableModels.length > 0) {
-                                    usedModel = availableModels.find(m => m === 'gemini-1.5-flash') || 
-                                                availableModels.find(m => m.includes('flash')) || 
-                                                availableModels[0];
-                                }
+                                const availableModels = data.models.filter(m => m.supportedGenerationMethods?.includes("generateContent") && m.name.includes("gemini")).map(m => m.name.replace('models/', ''));
+                                if (availableModels.length > 0) usedModel = availableModels.find(m => m === 'gemini-1.5-flash') || availableModels.find(m => m.includes('flash')) || availableModels[0];
                             }
-                        } catch (e) { console.warn("Не вдалося підтягнути список моделей"); }
+                        } catch (e) {}
                     }
 
                     const url = `https://generativelanguage.googleapis.com/v1beta/models/${usedModel}:generateContent?key=${activeKey}`;
@@ -567,100 +505,99 @@
                         systemInstruction: { parts: [{ text: "Ти експерт та редактор технічної документації. Мова: українська." }] }
                     };
 
-                    const response = await fetch(url, {
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!response.ok) throw new Error(`HTTP Error`);
+                    const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    if (!response.ok) { if (response.status === 400 || response.status === 401 || response.status === 403) throw new Error("AuthError"); throw new Error(`HTTP Error`); }
                     
                     const data = await response.json();
-                    if(data.candidates) { 
-                        DOM.modalText.value = data.candidates[0].content.parts[0].text.trim(); 
-                        showToast("Текст успішно покращено!"); 
-                    }
+                    if(data.candidates) { DOM.modalText.value = data.candidates[0].content.parts[0].text.trim(); showToast("Текст успішно покращено!"); }
                 } catch(e) { 
-                    showToast("Помилка зв'язку з ШІ. Перевірте ключ", true); 
-                    console.error(e);
-                }
-                finally { DOM.modalAiBtn.innerHTML = "✨ ШІ"; DOM.modalAiBtn.disabled = false; }
+                    if (e.message === "AuthError") { showToast("Невірний API-ключ! Оновіть в Налаштуваннях", true); DOM.tabSet.click(); }
+                    else { showToast("Помилка зв'язку з ШІ. Перевірте ключ", true); }
+                } finally { DOM.modalAiBtn.innerHTML = "✨ ШІ"; DOM.modalAiBtn.disabled = false; }
             };
         }
 
-        // ================= ЕКСПОРТ (Таблиця для PDF) =================
         function generatePDFHtml() {
             state.title = DOM.title.value.trim(); state.equipment = DOM.eq.value.trim();
             document.getElementById('pdf-doc-title').textContent = state.title || 'Інструкція з налаштування';
             document.getElementById('pdf-doc-eq').textContent = state.equipment ? `Обладнання: ${state.equipment}` : '';
             
             const pdfMain = document.getElementById('pdf-main-image');
-            if(state.mainImage) { pdfMain.src = state.mainImage; pdfMain.style.display = 'inline-block'; } 
-            else { pdfMain.style.display = 'none'; }
+            if(state.mainImage) { pdfMain.src = state.mainImage; pdfMain.style.display = 'inline-block'; } else { pdfMain.style.display = 'none'; }
 
-            const tbody = document.getElementById('pdf-table-body');
-            tbody.innerHTML = '';
-
+            const tbody = document.getElementById('pdf-table-body'); tbody.innerHTML = '';
             state.nodes.forEach(node => {
-                // Якщо у вузла немає кроків
                 if (!node.steps || node.steps.length === 0) {
                     let tr = document.createElement('tr');
-                    
-                    let tdNode = document.createElement('td');
-                    tdNode.innerHTML = `<strong style="font-size:14px;">${node.title}</strong><br><span style="font-size:11px; color:#555;">${node.desc||''}</span>`;
+                    let tdNode = document.createElement('td'); tdNode.innerHTML = `<strong style="font-size:14px;">${node.title}</strong><br><span style="font-size:11px; color:#555;">${node.desc||''}</span>`;
                     if(node.image) tdNode.innerHTML += `<br><img src="${node.image}" class="pdf-node-img">`;
-                    
-                    let tdAction = document.createElement('td');
-                    let tdPhotos = document.createElement('td');
-                    
-                    tr.appendChild(tdNode); tr.appendChild(tdAction); tr.appendChild(tdPhotos);
-                    tbody.appendChild(tr);
+                    let tdAction = document.createElement('td'); let tdPhotos = document.createElement('td');
+                    tr.appendChild(tdNode); tr.appendChild(tdAction); tr.appendChild(tdPhotos); tbody.appendChild(tr);
                 } else {
-                    // Якщо кроки є - використовуємо rowSpan для колонки "Вузол"
                     node.steps.forEach((step, idx) => {
                         let tr = document.createElement('tr');
-                        
-                        // Комірку Вузла додаємо ТІЛЬКИ в перший рядок серії кроків
                         if (idx === 0) {
-                            let tdNode = document.createElement('td');
-                            tdNode.rowSpan = node.steps.length;
+                            let tdNode = document.createElement('td'); tdNode.rowSpan = node.steps.length;
                             tdNode.innerHTML = `<strong style="font-size:14px;">${node.title}</strong><br><span style="font-size:11px; color:#555; display:block; margin-top:4px;">${node.desc||''}</span>`;
                             if(node.image) tdNode.innerHTML += `<br><img src="${node.image}" class="pdf-node-img">`;
                             tr.appendChild(tdNode);
                         }
-                        
-                        let tdAction = document.createElement('td');
-                        tdAction.innerHTML = step.text ? step.text.replace(/\n/g, '<br>') : '';
-                        
+                        let tdAction = document.createElement('td'); tdAction.innerHTML = step.text ? step.text.replace(/\n/g, '<br>') : '';
                         let tdPhotos = document.createElement('td');
-                        if (step.images && step.images.length) {
-                            tdPhotos.innerHTML = step.images.map(img => `<img src="${img}" class="pdf-step-img">`).join('');
-                        }
-                        
-                        tr.appendChild(tdAction);
-                        tr.appendChild(tdPhotos);
-                        tbody.appendChild(tr);
+                        if (step.images && step.images.length) tdPhotos.innerHTML = step.images.map(img => `<img src="${img}" class="pdf-step-img">`).join('');
+                        tr.appendChild(tdAction); tr.appendChild(tdPhotos); tbody.appendChild(tr);
                     });
                 }
             });
         }
 
-        // ================= ДІЇ ТА ЗБЕРЕЖЕННЯ =================
-        DOM.saveSetBtn.onclick = () => {
-            state.settings = { email: DOM.setEmail.value.trim(), driveId: DOM.setDrive.value.trim(), apiKey: DOM.setApi.value.trim() };
-            saveLocal(); showToast("Налаштування успішно збережено");
-        };
+        function setupButtons() {
+            if(DOM.saveSetBtn) DOM.saveSetBtn.onclick = () => { state.settings = { email: DOM.setEmail.value.trim(), driveId: DOM.setDrive.value.trim(), apiKey: DOM.setApi.value.trim() }; saveLocal(); showToast("Налаштування успішно збережено"); };
+
+            if(DOM.btnNewDoc) DOM.btnNewDoc.onclick = () => { state.docId = crypto.randomUUID(); state.title = ''; state.equipment = ''; state.mainImage = null; state.nodes = []; DOM.title.value = ''; DOM.eq.value = ''; saveLocal(); DOM.tabEd.click(); };
+
+            if(DOM.pdfBtn) DOM.pdfBtn.onclick = () => { saveLocal(); generatePDFHtml(); document.body.classList.add('pdf-export-mode'); setTimeout(() => { window.print(); document.body.classList.remove('pdf-export-mode'); }, 500); };
+
+            if(DOM.emailBtn) DOM.emailBtn.onclick = async () => {
+                saveLocal();
+                if(!state.title || !state.nodes.length) return showToast("Спочатку створіть інструкцію", true);
+                if(!state.settings.email) { showToast("Вкажіть Email в налаштуваннях!", true); return DOM.tabSet.click(); }
+                
+                DOM.emailBtn.innerHTML = `<span class="text-lg">⏳</span> Відправка...`; DOM.emailBtn.disabled = true;
+                try {
+                    generatePDFHtml(); document.body.classList.add('pdf-export-mode');
+                    const pdfBase64 = await html2pdf().set({ margin: 10, filename: `${state.title}.pdf`, image: { type: 'jpeg', quality: 0.85 }, html2canvas: { scale: 1.5, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(document.getElementById('pdf-template')).output('datauristring');
+                    document.body.classList.remove('pdf-export-mode');
+
+                    const payload = { action: "send_report", title: state.title, eq: state.equipment, email: state.settings.email, driveId: state.settings.driveId, pdfBase64: pdfBase64 };
+                    await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+                    showToast("Звіт успішно відправлено!");
+                } catch (e) { showToast("Помилка відправки", true); document.body.classList.remove('pdf-export-mode'); }
+                finally { DOM.emailBtn.innerHTML = `<span class="text-lg">📧</span> На пошту`; DOM.emailBtn.disabled = false; }
+            };
+
+            if(DOM.saveBtn) DOM.saveBtn.onclick = async () => {
+                saveLocal();
+                if(!state.title || !state.nodes.length) return showToast("Спочатку створіть інструкцію (вузли)", true);
+                
+                DOM.saveBtn.innerHTML = `<span class="text-lg">⏳</span> Відправка...`; DOM.saveBtn.disabled = true;
+                try {
+                    const steps_text = state.nodes.map(n => `Вузол: ${n.title}\n` + n.steps.map((s, i) => `  ${i+1}. ${s.text}`).join('\n')).join('\n\n');
+                    const payload = { action: "save_instruction", id: state.docId, title: state.title, equipment: state.equipment, date: new Date().toLocaleString('uk-UA'), steps_text: steps_text, images: [] };
+                    await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+                    showToast("Успішно збережено в Таблицю!");
+                } catch(e) { showToast("Збережено локально. Помилка відправки.", true); }
+                finally { DOM.saveBtn.innerHTML = `<span class="text-lg">☁️</span> Зберегти`; DOM.saveBtn.disabled = false; }
+            };
+        }
 
         function saveLocal() {
             state.title = DOM.title.value.trim(); state.equipment = DOM.eq.value.trim();
             const docData = { id: state.docId, title: state.title, equipment: state.equipment, mainImage: state.mainImage, nodes: state.nodes, date: Date.now() };
-            
-            // Зберігаємо в архів тільки якщо є якісь дані
             if (state.title || state.equipment || state.nodes.length > 0 || state.mainImage) {
                 const idx = state.archive.findIndex(a => a.id === state.docId);
                 if (idx > -1) state.archive[idx] = docData; else state.archive.unshift(docData);
             }
-            
             localStorage.setItem('foodline_data', JSON.stringify({ currentDoc: docData, archive: state.archive, settings: state.settings }));
         }
 
@@ -671,11 +608,7 @@
                     if(saved.archive) state.archive = saved.archive;
                     if(saved.settings) state.settings = saved.settings;
                     if(saved.currentDoc) {
-                        state.docId = saved.currentDoc.id || crypto.randomUUID();
-                        state.title = saved.currentDoc.title || '';
-                        state.equipment = saved.currentDoc.equipment || '';
-                        state.mainImage = saved.currentDoc.mainImage || null;
-                        state.nodes = saved.currentDoc.nodes || [];
+                        state.docId = saved.currentDoc.id || crypto.randomUUID(); state.title = saved.currentDoc.title || ''; state.equipment = saved.currentDoc.equipment || ''; state.mainImage = saved.currentDoc.mainImage || null; state.nodes = saved.currentDoc.nodes || [];
                     }
                 }
             } catch(e){}
@@ -696,63 +629,8 @@
             
             document.querySelectorAll('.archive-item').forEach(el => el.onclick = (e) => {
                 const doc = state.archive.find(a => a.id === e.currentTarget.getAttribute('data-id'));
-                if(doc) { 
-                    state.docId=doc.id; state.title=doc.title; state.equipment=doc.equipment; state.mainImage=doc.mainImage; state.nodes=doc.nodes||[]; 
-                    saveLocal();
-                    DOM.tabEd.click(); 
-                }
+                if(doc) { state.docId=doc.id; state.title=doc.title; state.equipment=doc.equipment; state.mainImage=doc.mainImage; state.nodes=doc.nodes||[]; saveLocal(); DOM.tabEd.click(); }
             });
-        }
-        document.getElementById('btn-new-doc').onclick = () => {
-            state.docId = crypto.randomUUID(); state.title = ''; state.equipment = ''; state.mainImage = null; state.nodes = [];
-            DOM.title.value = ''; DOM.eq.value = '';
-            saveLocal();
-            DOM.tabEd.click();
-        };
-
-        function setupButtons() {
-            document.getElementById('pdf-btn').onclick = () => {
-                saveLocal();
-                generatePDFHtml();
-                document.body.classList.add('pdf-export-mode');
-                setTimeout(() => { window.print(); document.body.classList.remove('pdf-export-mode'); }, 500);
-            };
-
-            document.getElementById('email-btn').onclick = async () => {
-                saveLocal();
-                if(!state.title || !state.nodes.length) return showToast("Спочатку створіть інструкцію", true);
-                if(!state.settings.email) {
-                    showToast("Вкажіть Email в налаштуваннях!", true);
-                    return DOM.tabSet.click();
-                }
-                
-                const btn = document.getElementById('email-btn');
-                btn.innerHTML = `<span class="text-lg">⏳</span> Відправка...`; btn.disabled = true;
-
-                try {
-                    generatePDFHtml(); document.body.classList.add('pdf-export-mode');
-                    const pdfBase64 = await html2pdf().set({
-                        margin: 10, filename: `${state.title}.pdf`, image: { type: 'jpeg', quality: 0.85 },
-                        html2canvas: { scale: 1.5, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                    }).from(document.getElementById('pdf-template')).output('datauristring');
-                    document.body.classList.remove('pdf-export-mode');
-
-                    const payload = {
-                        action: "send_report",
-                        title: state.title, eq: state.equipment, email: state.settings.email, driveId: state.settings.driveId,
-                        pdfBase64: pdfBase64
-                    };
-
-                    await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-                    showToast("Звіт успішно відправлено!");
-                } catch (e) { showToast("Помилка відправки", true); document.body.classList.remove('pdf-export-mode'); }
-                finally { btn.innerHTML = `<span class="text-lg">📧</span> На пошту`; btn.disabled = false; }
-            };
-
-            document.getElementById('save-sheets-btn').onclick = () => {
-                saveLocal();
-                showToast("Дані збережено локально. Використовуйте пошту/друк для експорту.");
-            };
         }
 
         document.addEventListener('DOMContentLoaded', initApp);
