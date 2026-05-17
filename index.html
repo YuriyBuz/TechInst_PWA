@@ -285,6 +285,11 @@
             setupSpeechToText();
             setupAI();
             setupButtons();
+            
+            // Автозбереження при введенні тексту
+            DOM.title.addEventListener('input', saveLocal);
+            DOM.eq.addEventListener('input', saveLocal);
+            
             renderNodes();
         }
 
@@ -526,23 +531,62 @@
             sr.onerror = (e) => { console.error('Помилка мікрофона:', e); };
         }
 
-        DOM.modalAiBtn.onclick = async () => {
-            const txt = DOM.modalText.value.trim();
-            if(!txt) return showToast("Спочатку напишіть або надиктуйте текст", true);
-            const key = state.settings.apiKey;
-            if(!key) return showToast("Додайте ключ Gemini API в Налаштуваннях", true);
-            
-            DOM.modalAiBtn.innerHTML = "⏳..."; DOM.modalAiBtn.disabled = true;
-            try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${key}`, {
-                    method:'POST', headers:{'Content-Type':'application/json'},
-                    body: JSON.stringify({ contents: [{parts:[{text:`Виправ граматичні помилки та покращ технічний стиль. Поверни лише готовий текст без коментарів.\n\n${txt}`}]}], systemInstruction: { parts: [{ text: "Ти експерт з технічної документації. Мова: українська." }] } })
-                });
-                const data = await res.json();
-                if(data.candidates) { DOM.modalText.value = data.candidates[0].content.parts[0].text.trim(); showToast("Текст успішно покращено!"); }
-            } catch(e) { showToast("Помилка зв'язку з ШІ", true); }
-            finally { DOM.modalAiBtn.innerHTML = "✨ ШІ"; DOM.modalAiBtn.disabled = false; }
-        };
+        function setupAI() {
+            DOM.modalAiBtn.onclick = async () => {
+                const txt = DOM.modalText.value.trim();
+                if(!txt) return showToast("Спочатку напишіть або надиктуйте текст", true);
+                const key = state.settings.apiKey;
+                if(!key) return showToast("Додайте ключ Gemini API в Налаштуваннях", true);
+                
+                DOM.modalAiBtn.innerHTML = "⏳..."; DOM.modalAiBtn.disabled = true;
+                try {
+                    let activeKey = key.trim();
+                    let usedModel = "gemini-2.5-flash-preview-09-2025"; 
+                    
+                    if (activeKey !== "") {
+                        try {
+                            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${activeKey}`);
+                            if (res.ok) {
+                                const data = await res.json();
+                                const availableModels = data.models
+                                    .filter(m => m.supportedGenerationMethods?.includes("generateContent") && m.name.includes("gemini"))
+                                    .map(m => m.name.replace('models/', ''));
+                                    
+                                if (availableModels.length > 0) {
+                                    usedModel = availableModels.find(m => m === 'gemini-1.5-flash') || 
+                                                availableModels.find(m => m.includes('flash')) || 
+                                                availableModels[0];
+                                }
+                            }
+                        } catch (e) { console.warn("Не вдалося підтягнути список моделей"); }
+                    }
+
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${usedModel}:generateContent?key=${activeKey}`;
+                    const payload = {
+                        contents: [{ parts: [{ text: `Виправ граматичні помилки, покращ стиль та зроби текст максимально професійним для технічної інструкції на виробництві. Поверни лише виправлений текст без коментарів.\n\nТекст: ${txt}` }] }],
+                        systemInstruction: { parts: [{ text: "Ти експерт та редактор технічної документації. Мова: українська." }] }
+                    };
+
+                    const response = await fetch(url, {
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) throw new Error(`HTTP Error`);
+                    
+                    const data = await response.json();
+                    if(data.candidates) { 
+                        DOM.modalText.value = data.candidates[0].content.parts[0].text.trim(); 
+                        showToast("Текст успішно покращено!"); 
+                    }
+                } catch(e) { 
+                    showToast("Помилка зв'язку з ШІ. Перевірте ключ", true); 
+                    console.error(e);
+                }
+                finally { DOM.modalAiBtn.innerHTML = "✨ ШІ"; DOM.modalAiBtn.disabled = false; }
+            };
+        }
 
         // ================= ЕКСПОРТ (Таблиця для PDF) =================
         function generatePDFHtml() {
@@ -610,10 +654,14 @@
         function saveLocal() {
             state.title = DOM.title.value.trim(); state.equipment = DOM.eq.value.trim();
             const docData = { id: state.docId, title: state.title, equipment: state.equipment, mainImage: state.mainImage, nodes: state.nodes, date: Date.now() };
-            const idx = state.archive.findIndex(a => a.id === state.docId);
-            if (idx > -1) state.archive[idx] = docData; else if(state.title || state.nodes.length) state.archive.unshift(docData);
             
-            localStorage.setItem('foodline_data', JSON.stringify({ archive: state.archive, settings: state.settings }));
+            // Зберігаємо в архів тільки якщо є якісь дані
+            if (state.title || state.equipment || state.nodes.length > 0 || state.mainImage) {
+                const idx = state.archive.findIndex(a => a.id === state.docId);
+                if (idx > -1) state.archive[idx] = docData; else state.archive.unshift(docData);
+            }
+            
+            localStorage.setItem('foodline_data', JSON.stringify({ currentDoc: docData, archive: state.archive, settings: state.settings }));
         }
 
         function loadData() {
@@ -622,6 +670,13 @@
                 if(saved) {
                     if(saved.archive) state.archive = saved.archive;
                     if(saved.settings) state.settings = saved.settings;
+                    if(saved.currentDoc) {
+                        state.docId = saved.currentDoc.id || crypto.randomUUID();
+                        state.title = saved.currentDoc.title || '';
+                        state.equipment = saved.currentDoc.equipment || '';
+                        state.mainImage = saved.currentDoc.mainImage || null;
+                        state.nodes = saved.currentDoc.nodes || [];
+                    }
                 }
             } catch(e){}
         }
@@ -643,6 +698,7 @@
                 const doc = state.archive.find(a => a.id === e.currentTarget.getAttribute('data-id'));
                 if(doc) { 
                     state.docId=doc.id; state.title=doc.title; state.equipment=doc.equipment; state.mainImage=doc.mainImage; state.nodes=doc.nodes||[]; 
+                    saveLocal();
                     DOM.tabEd.click(); 
                 }
             });
@@ -650,6 +706,7 @@
         document.getElementById('btn-new-doc').onclick = () => {
             state.docId = crypto.randomUUID(); state.title = ''; state.equipment = ''; state.mainImage = null; state.nodes = [];
             DOM.title.value = ''; DOM.eq.value = '';
+            saveLocal();
             DOM.tabEd.click();
         };
 
