@@ -6,75 +6,61 @@
     <title>Налаштування Обладнання | Food Line</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
     <style>
         :root { 
             color-scheme: light; 
             --bg-color: #f8fafc; 
             --card-bg-color: #ffffff; 
             --text-color: #1e293b; 
-            --text-muted-color: #64748b; 
             --border-color: #e2e8f0; 
         }
-        body { 
-            background-color: var(--bg-color); 
-            color: var(--text-color); 
-            -webkit-tap-highlight-color: transparent; 
-            padding-bottom: 5rem; 
-        }
-        .card { 
-            background-color: var(--card-bg-color); 
-            border: 1px solid var(--border-color); 
-        }
-        .input-field { 
-            width: 100%; 
-            padding: 0.75rem; 
-            border: 1px solid var(--border-color); 
-            border-radius: 0.75rem; 
-            background-color: #fff; 
-            font-size: 1rem; 
-            outline: none; 
-            transition: all 0.2s; 
-        }
-        .input-field:focus { 
-            border-color: #10b981; 
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); 
-        }
+        body { background-color: var(--bg-color); color: var(--text-color); -webkit-tap-highlight-color: transparent; padding-bottom: 6rem; }
+        .card { background-color: var(--card-bg-color); border: 1px solid var(--border-color); }
+        .input-field { width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 0.75rem; font-size: 1rem; outline: none; transition: all 0.2s; }
+        .input-field:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { 
-            from { opacity: 0; transform: translateY(10px); } 
-            to { opacity: 1; transform: translateY(0); } 
-        }
-        
-        /* Приховати скроллбар для контейнера вкладок */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-        /* Стилі для друку PDF */
+        
+        /* Стилі для PDF та Друку */
         @media print {
             body { background: white !important; padding: 0; }
-            .no-print, header, #action-card, #footer-bar, .tabs-container { display: none !important; }
-            .card { border: none !important; box-shadow: none !important; padding: 0 !important; }
-            .step-item { page-break-inside: avoid; border-left: 4px solid #10b981 !important; margin-bottom: 1rem !important;}
-            @page { margin: 1.5cm; }
+            .no-print { display: none !important; }
+            #pdf-template { display: block !important; }
         }
+        body.pdf-export-mode .no-print, body.pdf-export-mode header, body.pdf-export-mode #footer-bar, body.pdf-export-mode .tabs-container, body.pdf-export-mode #view-editor { display: none !important; }
+        body.pdf-export-mode { background-color: white !important; }
+        body.pdf-export-mode #pdf-template { display: block !important; }
+
+        /* Таблиця для PDF (Згідно зі зразком) */
+        .pdf-table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: sans-serif; }
+        .pdf-table th, .pdf-table td { border: 1px solid #000; padding: 10px; vertical-align: top; }
+        .pdf-table th { background-color: #f8fafc; text-align: left; font-weight: bold; }
+        .pdf-node-img { max-width: 100%; max-height: 250px; object-fit: contain; margin-top: 10px; display: block; }
+        .pdf-step-img { max-width: 160px; max-height: 160px; object-fit: contain; margin: 4px; border: 1px solid #e2e8f0; border-radius: 4px; }
+        
+        /* Головне фото займає ~1/3 аркуша А4 (А4 ~ 1122px висотою) */
+        #pdf-main-image { width: 100%; height: 350px; object-fit: contain; margin-bottom: 20px; }
+        
+        .page-break { page-break-before: always; }
     </style>
 </head>
 <body class="font-sans antialiased">
 
-    <div class="container mx-auto max-w-2xl p-4 sm:p-6 relative">
+    <div class="container mx-auto max-w-2xl p-3 sm:p-6 relative">
         
         <!-- HEADER -->
         <header class="flex justify-between items-center mb-4 pb-4 border-b border-gray-200 no-print">
-            <div class="w-1/3 flex flex-col justify-center">
-                <div id="current-date" class="text-xs sm:text-sm font-bold text-slate-500 leading-tight"></div>
-            </div>
+            <div class="w-1/3"><div id="current-date" class="text-xs font-bold text-slate-500 leading-tight"></div></div>
             <div class="w-1/3 flex justify-center">
-                <img src="https://foodline-production.com/wp-content/uploads/2021/10/3752781497_3752781497.webp" alt="Food Line" class="h-10 sm:h-12 w-auto object-contain rounded-lg bg-white p-1 shadow-sm" onerror="this.onerror=null;this.src='https://placehold.co/100x40?text=Food+Line';">
+                <img src="https://foodline-production.com/wp-content/uploads/2021/10/3752781497_3752781497.webp" alt="Food Line" class="h-10 w-auto rounded-lg bg-white p-1 shadow-sm" onerror="this.src='https://placehold.co/100x40?text=Food+Line';">
             </div>
             <div class="w-1/3 flex justify-end">
-                <div class="text-xs sm:text-sm font-semibold px-3 py-1.5 rounded-full border bg-white flex items-center gap-2 shadow-sm">
+                <div class="text-xs font-semibold px-3 py-1.5 rounded-full border bg-white flex items-center gap-2 shadow-sm">
                     <span class="w-2.5 h-2.5 rounded-full bg-emerald-500" id="statusDot"></span>
-                    <span id="statusText" class="text-slate-600">Онлайн</span>
+                    <span id="statusText" class="text-slate-600 hidden sm:inline">Онлайн</span>
                 </div>
             </div>
         </header>
@@ -89,70 +75,51 @@
         <!-- ================= EDITOR TAB ================= -->
         <div id="view-editor" class="fade-in space-y-6">
             
-            <!-- Документ: Заголовок -->
-            <div class="card p-5 sm:p-6 rounded-2xl shadow-sm">
-                <input type="text" id="doc-title" placeholder="Назва інструкції / процесу" class="w-full text-xl sm:text-2xl font-bold text-slate-800 placeholder-slate-300 bg-transparent border-b-2 border-transparent focus:border-emerald-500 transition-colors py-2 outline-none mb-3">
-                <div class="flex items-center gap-2 text-slate-600 border-t border-slate-100 pt-3">
-                    <span class="font-bold text-sm uppercase tracking-wider text-slate-500">⚙️ Обладнання:</span>
-                    <input type="text" id="doc-eq" placeholder="Вкажіть лінію чи станок..." class="flex-1 text-base outline-none placeholder-slate-300 bg-transparent py-1">
+            <!-- Документ: Шапка -->
+            <div class="card p-4 sm:p-6 rounded-2xl shadow-sm border-t-4 border-t-emerald-500">
+                <input type="text" id="doc-title" placeholder="Назва інструкції..." class="w-full text-xl sm:text-2xl font-bold text-slate-800 placeholder-slate-300 bg-transparent border-b border-transparent focus:border-emerald-500 transition-colors py-1 outline-none mb-3">
+                <div class="flex items-center gap-2 text-slate-600 border-b border-slate-100 pb-3 mb-3">
+                    <span class="font-bold text-sm uppercase text-slate-500 shrink-0">Обладнання:</span>
+                    <input type="text" id="doc-eq" placeholder="Вкажіть лінію..." class="flex-1 text-base outline-none placeholder-slate-300 bg-transparent">
+                </div>
+                
+                <!-- Головне фото обладнання -->
+                <div>
+                    <label class="block text-sm font-bold text-slate-600 mb-2">Загальне фото обладнання (1/3 аркуша А4):</label>
+                    <div id="main-image-preview-container" class="hidden mb-3 relative inline-block">
+                        <img id="main-image-preview" src="" class="h-40 rounded-lg shadow-sm border border-slate-200 object-cover">
+                        <button id="remove-main-img" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 shadow-md hover:bg-red-600 font-bold text-xs">✕</button>
+                    </div>
+                    <label class="flex items-center justify-center gap-2 px-4 py-3 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl hover:bg-slate-100 cursor-pointer text-slate-600 font-medium transition-colors">
+                        📷 Додати загальне фото
+                        <input type="file" id="main-photo-input" accept="image/*" class="hidden">
+                    </label>
                 </div>
             </div>
 
-            <!-- Список кроків -->
-            <div id="steps-container" class="space-y-4">
-                <!-- Кроки будуть тут -->
+            <!-- Контейнер для Вузлів -->
+            <div id="nodes-container" class="space-y-6">
+                <!-- Вузли будуть рендеритись тут -->
             </div>
 
-            <!-- Форма додавання нового кроку -->
-            <div id="action-card" class="card p-5 rounded-2xl shadow-md border border-emerald-100 relative overflow-hidden mt-6">
-                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-teal-500"></div>
+            <!-- Форма створення нового ВУЗЛА -->
+            <div id="action-card-node" class="card p-4 sm:p-5 rounded-2xl shadow-md border border-indigo-100 bg-indigo-50/30 relative mt-8">
                 <div class="flex justify-between items-center mb-3">
-                    <h3 class="font-bold text-slate-700 flex items-center gap-2">
-                        <span class="text-emerald-500 text-lg">➕</span> Новий крок
-                    </h3>
+                    <h3 class="font-bold text-indigo-800 flex items-center gap-2">🛠️ Додати новий вузол/частину</h3>
                 </div>
+                <input type="text" id="node-title" placeholder="Назва вузла (напр. 'Барабан орієнтатора')..." class="input-field mb-2 font-bold text-slate-700">
+                <textarea id="node-desc" rows="2" class="input-field resize-none mb-2 text-sm" placeholder="Загальний опис вузла (опціонально)..."></textarea>
                 
-                <textarea id="step-text" rows="3" class="input-field resize-none bg-slate-50" placeholder="Опишіть дію (або надиктуйте голосом)..."></textarea>
-                
-                <!-- Прев'ю медіа -->
-                <div id="media-preview" class="hidden mt-3 p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-wrap gap-4 items-center">
-                    <img id="preview-img" src="" class="hidden h-16 w-16 object-cover rounded-lg shadow-sm border border-slate-200">
-                    <div id="preview-video-box" class="hidden flex items-center gap-2 text-sm font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-200">
-                        🎥 Відео додано
-                    </div>
-                    <button id="clear-media-btn" class="ml-auto text-slate-400 hover:text-red-500 bg-white p-2 rounded-full shadow-sm border border-slate-200" title="Видалити медіа">🗑️</button>
+                <div class="flex flex-wrap gap-2 items-center justify-between mt-2">
+                    <label class="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 cursor-pointer font-bold text-sm shadow-sm transition-colors">
+                        📷 Фото вузла
+                        <input type="file" id="node-photo-input" accept="image/*" class="hidden">
+                    </label>
+                    <button id="add-node-btn" class="px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold shadow-md hover:bg-indigo-700 transition-all text-sm">Зберегти вузол</button>
                 </div>
-
-                <!-- Панель інструментів -->
-                <div class="flex flex-wrap gap-2 mt-4 items-center justify-between">
-                    <div class="flex flex-wrap gap-2">
-                        
-                        <!-- Мікрофон (Голос у текст) -->
-                        <button id="stt-btn" class="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 font-bold text-sm transition-colors shadow-sm">
-                            <span id="stt-icon">🎙️</span> <span id="stt-text">Голос</span>
-                        </button>
-
-                        <!-- Фото -->
-                        <label class="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 cursor-pointer font-bold text-sm transition-colors shadow-sm">
-                            📷 Фото
-                            <input type="file" id="photo-input" accept="image/*" capture="environment" class="hidden">
-                        </label>
-
-                        <!-- Відео -->
-                        <label class="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 cursor-pointer font-bold text-sm transition-colors shadow-sm">
-                            🎥 Відео
-                            <input type="file" id="video-input" accept="video/*" capture="environment" class="hidden">
-                        </label>
-
-                        <!-- ШІ Коректор -->
-                        <button id="ai-btn" class="flex items-center gap-1.5 px-3 py-2 bg-purple-100 text-purple-700 rounded-xl hover:bg-purple-200 font-bold text-sm transition-colors shadow-sm ml-auto sm:ml-0">
-                            ✨ ШІ
-                        </button>
-                    </div>
-
-                    <button id="add-step-btn" class="w-full sm:w-auto mt-3 sm:mt-0 px-6 py-2.5 bg-emerald-600 text-white rounded-xl font-bold shadow-md hover:bg-emerald-700 active:scale-95 transition-all">
-                        Зберегти крок
-                    </button>
+                <div id="node-img-preview-box" class="hidden mt-3 relative inline-block">
+                    <img id="node-img-preview" src="" class="h-24 rounded-lg object-cover border border-slate-200 shadow-sm">
+                    <button id="remove-node-img" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 text-xs">✕</button>
                 </div>
             </div>
         </div>
@@ -161,589 +128,577 @@
         <div id="view-archive" class="hidden fade-in space-y-4">
             <div class="card p-4 rounded-2xl shadow-sm flex justify-between items-center">
                 <h2 class="text-xl font-bold text-slate-800">📂 Архів</h2>
-                <button id="btn-new-doc" class="text-emerald-600 font-bold flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 transition-colors px-3 py-1.5 rounded-lg">
-                    ➕ Створити
-                </button>
+                <button id="btn-new-doc" class="text-emerald-600 font-bold bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100">➕ Створити</button>
             </div>
-            <div id="archive-list" class="space-y-3">
-                <!-- Сюди будуть додаватись картки інструкцій -->
-            </div>
+            <div id="archive-list" class="space-y-3"></div>
         </div>
 
         <!-- ================= SETTINGS TAB ================= -->
         <div id="view-settings" class="hidden fade-in space-y-6">
-            <div class="card p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
-                <h2 class="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">⚙️ Налаштування системи</h2>
+            <div class="card p-5 rounded-2xl shadow-sm border border-slate-200">
+                <h2 class="text-xl font-bold text-slate-800 mb-4">⚙️ Налаштування</h2>
                 
-                <h3 class="text-sm font-bold text-slate-700 uppercase mb-3 border-b pb-2">Штучний Інтелект (Gemini)</h3>
-                <div class="mb-8 bg-purple-50 px-4 py-4 rounded-xl border border-purple-100">
-                    <label class="block text-xs font-bold text-purple-700 mb-1">Особистий API Ключ</label>
-                    <div class="flex gap-2">
-                        <input 
-                            type="password" 
-                            id="setting-api-key" 
-                            class="flex-1 border border-purple-200 rounded-lg px-3 py-2 text-slate-800 font-mono text-sm outline-none focus:border-purple-500 bg-white shadow-sm" 
-                            placeholder="AIzaSy..." 
-                        />
-                        <button 
-                            id="check-key-btn"
-                            class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm transition-colors flex items-center gap-1 shrink-0"
-                        >
-                            Перевірити
-                        </button>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Email для відправки звіту</label>
+                        <input type="email" id="set-email" class="input-field" placeholder="example@gmail.com">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">ID папки Google Drive (опціонально)</label>
+                        <input type="text" id="set-drive" class="input-field" placeholder="1A2b3C4d5E6f...">
+                        <p class="text-[10px] text-slate-500 mt-1">ID можна взяти з посилання на папку.</p>
                     </div>
                     
-                    <!-- Статус перевірки ключа -->
-                    <div id="key-status-msg" class="mt-3 text-xs font-bold flex items-center gap-1.5 hidden"></div>
-                    
-                    <p class="text-[10px] text-purple-600 mt-3">Ключ використовується для виправлення тексту ШІ-редактором. Зберігається локально у вашому браузері на цьому пристрої.</p>
+                    <div class="pt-4 border-t border-slate-100">
+                        <label class="block text-xs font-bold text-purple-700 mb-1">ШІ Ключ (Gemini API)</label>
+                        <div class="flex gap-2">
+                            <input type="password" id="set-api-key" class="input-field" placeholder="AIzaSy...">
+                            <button id="save-settings-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-colors">Зберегти</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
     </div>
 
-    <!-- Плаваючий підвал (Тільки для редактора) -->
-    <footer id="footer-bar" class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 p-3 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] z-40 transition-transform duration-300">
-        <div class="container mx-auto max-w-2xl flex gap-3">
-            <button id="save-sheets-btn" class="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white py-3 px-4 rounded-xl font-bold shadow-md hover:bg-emerald-700 active:scale-95 transition-all">
-                ☁️ В Таблицю
-            </button>
-            <button id="pdf-btn" class="flex-1 flex items-center justify-center gap-2 bg-slate-800 text-white py-3 px-4 rounded-xl font-bold shadow-md hover:bg-slate-900 active:scale-95 transition-all">
-                📄 PDF / Друк
-            </button>
+    <!-- Модальне вікно для додавання КРОКУ -->
+    <div id="step-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-slate-800">Додати дію/налаштування</h3>
+                <button id="close-step-modal" class="text-slate-400 hover:text-red-500 font-bold text-xl transition-colors">✕</button>
+            </div>
+            <div class="p-4 overflow-y-auto space-y-4">
+                <textarea id="modal-step-text" rows="4" class="input-field resize-none" placeholder="Опишіть дію (або надиктуйте голосом)..."></textarea>
+                
+                <!-- Прев'ю Фото -->
+                <div id="modal-media-preview" class="hidden flex flex-wrap gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200"></div>
+                
+                <!-- Прев'ю Відео -->
+                <div id="modal-video-preview" class="hidden flex items-center justify-between gap-2 text-sm font-bold text-indigo-600 bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-200">
+                    <span>🎥 Відео додано</span>
+                    <button id="remove-modal-video" class="text-indigo-400 hover:text-red-500 text-lg">✕</button>
+                </div>
+
+                <!-- Кнопки медіа -->
+                <div class="flex flex-wrap gap-2 items-center">
+                    <button id="modal-stt-btn" class="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-bold shadow-sm transition-colors text-slate-700">🎙️ Голос</button>
+                    
+                    <label class="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer text-sm font-bold shadow-sm transition-colors text-slate-700">
+                        📷 Фото
+                        <input type="file" id="modal-photo-input" accept="image/*" capture="environment" multiple class="hidden">
+                    </label>
+
+                    <label class="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer text-sm font-bold shadow-sm transition-colors text-slate-700">
+                        🎥 Відео
+                        <input type="file" id="modal-video-input" accept="video/*" capture="environment" class="hidden">
+                    </label>
+                    
+                    <button id="modal-ai-btn" class="flex items-center gap-1.5 px-3 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg text-sm font-bold shadow-sm ml-auto transition-colors">✨ ШІ</button>
+                </div>
+            </div>
+            <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2">
+                <button id="modal-clear-btn" class="px-4 py-2 text-slate-500 font-bold hover:bg-slate-200 rounded-lg transition-colors">Очистити</button>
+                <button id="modal-save-btn" class="px-6 py-2 bg-emerald-600 text-white font-bold rounded-lg shadow-md hover:bg-emerald-700 transition-colors">Зберегти крок</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ПРИХОВАНИЙ ШАБЛОН ДЛЯ PDF (Таблиця як на фото) -->
+    <div id="pdf-template" class="hidden w-full max-w-4xl mx-auto p-8 bg-white">
+        <h1 id="pdf-doc-title" class="text-3xl font-bold text-center mb-2 text-slate-900"></h1>
+        <h3 id="pdf-doc-eq" class="text-xl text-center text-slate-600 mb-6 font-medium"></h3>
+        
+        <div class="mb-8 text-center">
+            <!-- 1/3 аркуша А4 = 350px -->
+            <img id="pdf-main-image" src="" style="height: 350px; max-height: 350px; object-fit: contain; width: 100%; display: none;">
+        </div>
+
+        <table class="pdf-table" id="pdf-table-content">
+            <thead>
+                <tr>
+                    <th style="width: 30%;">Вузол / Частина обладнання</th>
+                    <th style="width: 45%;">Дія</th>
+                    <th style="width: 25%;">Фото</th>
+                </tr>
+            </thead>
+            <tbody id="pdf-table-body">
+                <!-- Контент генерується через JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Плаваючий підвал -->
+    <footer id="footer-bar" class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 p-2 shadow z-40 transition-transform">
+        <div class="container mx-auto max-w-2xl flex gap-2">
+            <button id="save-sheets-btn" class="flex-1 flex flex-col items-center justify-center bg-emerald-600 text-white py-2 rounded-xl font-bold shadow hover:bg-emerald-700 text-xs sm:text-sm transition-colors"><span class="text-lg">☁️</span> Зберегти</button>
+            <button id="email-btn" class="flex-1 flex flex-col items-center justify-center bg-blue-600 text-white py-2 rounded-xl font-bold shadow hover:bg-blue-700 text-xs sm:text-sm transition-colors"><span class="text-lg">📧</span> На пошту</button>
+            <button id="pdf-btn" class="flex-1 flex flex-col items-center justify-center bg-slate-800 text-white py-2 rounded-xl font-bold shadow hover:bg-slate-900 text-xs sm:text-sm transition-colors"><span class="text-lg">📄</span> Друк PDF</button>
         </div>
     </footer>
 
-    <!-- Toast сповіщення -->
-    <div id="toast" class="fixed top-5 right-5 left-5 sm:left-auto bg-slate-800 text-white py-3 px-6 rounded-xl shadow-2xl transform -translate-y-20 opacity-0 transition-all duration-300 z-50 font-bold text-center pointer-events-none">
-        Повідомлення
-    </div>
+    <!-- Toast -->
+    <div id="toast" class="fixed top-5 right-5 left-5 sm:left-auto bg-slate-800 text-white py-3 px-6 rounded-xl shadow-2xl transform -translate-y-20 opacity-0 transition-all z-[60] font-bold text-center pointer-events-none"></div>
 
     <script>
-        // ==========================================
-        // НАЛАШТУВАННЯ GOOGLE ТАБЛИЦЬ
-        // ==========================================
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw1DIKjWSVogYB3BYPuPEOcRawtx8hMPfmtDKY1JmTcLzUyaL_AFQKzSyNE5Xa5KLFXng/exec'; 
 
-        // ==========================================
-        // СТАН ДОДАТКУ (State)
-        // ==========================================
+        // Стан додатку: Ієрархія (Nodes -> Steps)
         let state = {
             docId: crypto.randomUUID(),
-            title: '',
-            equipment: '',
-            steps: [],
+            title: '', equipment: '', mainImage: null,
+            nodes: [], // { id, title, desc, image, steps: [{ id, text, images, videoUrl }] }
             archive: [],
-            apiKey: ''
+            settings: { email: 'Buznitskiy7@gmail.com', driveId: '', apiKey: '' }
         };
-        let tempMedia = { image: null, videoUrl: null, videoFile: null };
 
-        // DOM Елементи
+        // Тимчасові змінні для форм
+        let tempNodeImage = null;
+        let activeNodeIdForStep = null; 
+        let tempStepImages = [];
+        let tempStepVideoUrl = null;
+        let editingStepId = null; 
+
         const DOM = {
             date: document.getElementById('current-date'),
-            tabEd: document.getElementById('tab-editor'),
-            tabAr: document.getElementById('tab-archive'),
-            tabSet: document.getElementById('tab-settings'),
-            viewEd: document.getElementById('view-editor'),
-            viewAr: document.getElementById('view-archive'),
-            viewSet: document.getElementById('view-settings'),
-            footer: document.getElementById('footer-bar'),
-            
-            title: document.getElementById('doc-title'),
-            eq: document.getElementById('doc-eq'),
-            stepsCont: document.getElementById('steps-container'),
-            
-            stepText: document.getElementById('step-text'),
-            sttBtn: document.getElementById('stt-btn'),
-            sttIcon: document.getElementById('stt-icon'),
-            sttText: document.getElementById('stt-text'),
-            photoInp: document.getElementById('photo-input'),
-            videoInp: document.getElementById('video-input'),
-            aiBtn: document.getElementById('ai-btn'),
-            addStepBtn: document.getElementById('add-step-btn'),
-            
-            mediaPreview: document.getElementById('media-preview'),
-            imgPreview: document.getElementById('preview-img'),
-            vidPreview: document.getElementById('preview-video-box'),
-            clearMedia: document.getElementById('clear-media-btn'),
-            
-            archiveList: document.getElementById('archive-list'),
-            btnNewDoc: document.getElementById('btn-new-doc'),
-            
-            saveBtn: document.getElementById('save-sheets-btn'),
-            pdfBtn: document.getElementById('pdf-btn'),
             toast: document.getElementById('toast'),
-            statusDot: document.getElementById('statusDot'),
-            statusText: document.getElementById('statusText'),
-
-            // Settings Elements
-            apiKeyInput: document.getElementById('setting-api-key'),
-            checkKeyBtn: document.getElementById('check-key-btn'),
-            keyStatusMsg: document.getElementById('key-status-msg')
+            tabEd: document.getElementById('tab-editor'), tabAr: document.getElementById('tab-archive'), tabSet: document.getElementById('tab-settings'),
+            viewEd: document.getElementById('view-editor'), viewAr: document.getElementById('view-archive'), viewSet: document.getElementById('view-settings'),
+            
+            title: document.getElementById('doc-title'), eq: document.getElementById('doc-eq'),
+            mainImgInp: document.getElementById('main-photo-input'), mainImgPrev: document.getElementById('main-image-preview'), mainImgBox: document.getElementById('main-image-preview-container'), removeMainImg: document.getElementById('remove-main-img'),
+            nodesCont: document.getElementById('nodes-container'),
+            
+            nodeTitle: document.getElementById('node-title'), nodeDesc: document.getElementById('node-desc'), nodeImgInp: document.getElementById('node-photo-input'), nodeImgPrevBox: document.getElementById('node-img-preview-box'), nodeImgPrev: document.getElementById('node-img-preview'), removeNodeImg: document.getElementById('remove-node-img'), addNodeBtn: document.getElementById('add-node-btn'),
+            
+            stepModal: document.getElementById('step-modal'), closeStepModal: document.getElementById('close-step-modal'), modalText: document.getElementById('modal-step-text'), modalPhotoInp: document.getElementById('modal-photo-input'), modalMediaPrev: document.getElementById('modal-media-preview'), modalVideoInp: document.getElementById('modal-video-input'), modalVideoPrev: document.getElementById('modal-video-preview'), removeModalVideo: document.getElementById('remove-modal-video'), modalSttBtn: document.getElementById('modal-stt-btn'), modalAiBtn: document.getElementById('modal-ai-btn'), modalSaveBtn: document.getElementById('modal-save-btn'), modalClearBtn: document.getElementById('modal-clear-btn'),
+            
+            setEmail: document.getElementById('set-email'), setDrive: document.getElementById('set-drive'), setApi: document.getElementById('set-api-key'), saveSetBtn: document.getElementById('save-settings-btn')
         };
 
-        // ==========================================
-        // ІНІЦІАЛІЗАЦІЯ
-        // ==========================================
         function initApp() {
-            updateClock();
-            setInterval(updateClock, 60000);
-            updateNetworkStatus();
-            window.addEventListener('online', updateNetworkStatus);
-            window.addEventListener('offline', updateNetworkStatus);
-            
-            // Завантаження збережених налаштувань
-            const savedKey = localStorage.getItem('foodline_inst_apikey');
-            if (savedKey) {
-                state.apiKey = savedKey;
-                DOM.apiKeyInput.value = savedKey;
-            }
-
-            loadLocalArchive();
+            DOM.date.textContent = new Date().toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' }); 
+            loadData();
             setupTabs();
-            setupMedia();
+            setupMediaInputs();
             setupSpeechToText();
             setupAI();
             setupButtons();
-            renderSteps();
-        }
-
-        function updateClock() { 
-            DOM.date.textContent = new Date().toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }); 
-        }
-
-        function updateNetworkStatus() {
-            const isOnline = navigator.onLine;
-            DOM.statusDot.className = `w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-red-500'}`;
-            DOM.statusText.textContent = isOnline ? 'Онлайн' : 'Офлайн';
+            renderNodes();
         }
 
         function showToast(msg, isError = false) {
             DOM.toast.textContent = msg;
-            DOM.toast.className = `fixed top-5 right-5 left-5 sm:left-auto sm:w-auto text-white py-3 px-6 rounded-xl shadow-2xl transition-all duration-300 z-50 font-bold text-center pointer-events-none ${isError ? 'bg-red-500' : 'bg-emerald-600'}`;
-            DOM.toast.style.opacity = '1';
-            DOM.toast.style.transform = 'translateY(0)';
-            setTimeout(() => {
-                DOM.toast.style.opacity = '0';
-                DOM.toast.style.transform = 'translateY(-2rem)';
-            }, 3000);
+            DOM.toast.className = `fixed top-5 right-5 left-5 sm:left-auto bg-${isError?'red-500':'emerald-600'} text-white py-3 px-6 rounded-xl shadow-2xl transition-all z-[60] font-bold text-center`;
+            DOM.toast.style.opacity = '1'; DOM.toast.style.transform = 'translateY(0)';
+            setTimeout(() => { DOM.toast.style.opacity = '0'; DOM.toast.style.transform = 'translateY(-2rem)'; }, 3000);
         }
 
-        // ==========================================
-        // НАВІГАЦІЯ (Вкладки)
-        // ==========================================
+        // ================= ТАБИ =================
         function setupTabs() {
-            const activeClass = "flex-1 py-2 rounded-lg bg-white text-emerald-700 font-bold shadow-sm transition-all text-xs sm:text-sm";
-            const inactiveClass = "flex-1 py-2 rounded-lg text-slate-600 font-medium hover:bg-slate-300 transition-all text-xs sm:text-sm";
+            const actCls = "flex-1 py-2 rounded-lg bg-white text-emerald-700 font-bold shadow-sm transition-all text-xs sm:text-sm";
+            const inactCls = "flex-1 py-2 rounded-lg text-slate-600 font-medium hover:bg-slate-300 transition-all text-xs sm:text-sm";
 
             const hideAll = () => {
-                DOM.viewEd.classList.add('hidden');
-                DOM.viewAr.classList.add('hidden');
-                DOM.viewSet.classList.add('hidden');
-                DOM.tabEd.className = inactiveClass;
-                DOM.tabAr.className = inactiveClass;
-                DOM.tabSet.className = inactiveClass;
-                DOM.footer.classList.add('translate-y-[150%]'); // ховаємо футер
+                DOM.viewEd.classList.add('hidden'); DOM.viewAr.classList.add('hidden'); DOM.viewSet.classList.add('hidden');
+                DOM.tabEd.className = inactCls; DOM.tabAr.className = inactCls; DOM.tabSet.className = inactCls;
+                document.getElementById('footer-bar').classList.add('translate-y-[150%]');
             };
 
-            DOM.tabEd.onclick = () => {
-                hideAll();
-                DOM.viewEd.classList.remove('hidden');
-                DOM.tabEd.className = activeClass;
-                DOM.footer.classList.remove('translate-y-[150%]'); // показуємо футер
-                renderSteps();
-            };
+            DOM.tabEd.onclick = () => { hideAll(); DOM.viewEd.classList.remove('hidden'); DOM.tabEd.className = actCls; document.getElementById('footer-bar').classList.remove('translate-y-[150%]'); renderNodes(); };
+            DOM.tabAr.onclick = () => { hideAll(); DOM.viewAr.classList.remove('hidden'); DOM.tabAr.className = actCls; renderArchive(); };
             
-            DOM.tabAr.onclick = () => {
-                hideAll();
-                DOM.viewAr.classList.remove('hidden');
-                DOM.tabAr.className = activeClass;
-                renderArchive();
-            };
-
             DOM.tabSet.onclick = () => {
-                hideAll();
-                DOM.viewSet.classList.remove('hidden');
-                DOM.tabSet.className = activeClass;
-            };
-        }
-
-        // ==========================================
-        // ФОТО ТА ВІДЕО
-        // ==========================================
-        function setupMedia() {
-            DOM.photoInp.onchange = (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        // Зменшуємо роздільну здатність для Google Таблиць
-                        const MAX_WIDTH = 600;
-                        const scale = Math.min(MAX_WIDTH / img.width, 1);
-                        canvas.width = img.width * scale; 
-                        canvas.height = img.height * scale;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        // Покращуємо стиснення до 0.5 (швидше передається)
-                        tempMedia.image = canvas.toDataURL('image/jpeg', 0.5);
-                        updateMediaUI();
-                    };
-                    img.src = event.target.result;
-                };
-                reader.readAsDataURL(file);
-            };
-
-            DOM.videoInp.onchange = (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                tempMedia.videoFile = file;
-                tempMedia.videoUrl = URL.createObjectURL(file);
-                updateMediaUI();
-            };
-
-            DOM.clearMedia.onclick = () => {
-                tempMedia = { image: null, videoUrl: null, videoFile: null };
-                DOM.photoInp.value = ''; DOM.videoInp.value = '';
-                updateMediaUI();
-            };
-        }
-
-        function updateMediaUI() {
-            if (tempMedia.image || tempMedia.videoUrl) {
-                DOM.mediaPreview.classList.remove('hidden');
-                if (tempMedia.image) { DOM.imgPreview.src = tempMedia.image; DOM.imgPreview.classList.remove('hidden'); } 
-                else { DOM.imgPreview.classList.add('hidden'); }
-                if (tempMedia.videoUrl) DOM.vidPreview.classList.remove('hidden');
-                else DOM.vidPreview.classList.add('hidden');
-            } else {
-                DOM.mediaPreview.classList.add('hidden');
-            }
-        }
-
-        // ==========================================
-        // ГОЛОС У ТЕКСТ
-        // ==========================================
-        function setupSpeechToText() {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) {
-                DOM.sttBtn.style.display = 'none';
-                return;
-            }
-
-            const recognition = new SpeechRecognition();
-            recognition.lang = 'uk-UA';
-            recognition.continuous = true;
-            recognition.interimResults = true;
-
-            let isRecognizing = false;
-
-            recognition.onstart = () => {
-                isRecognizing = true;
-                DOM.sttIcon.textContent = '🔴';
-                DOM.sttText.textContent = 'Слухаю...';
-                DOM.sttBtn.classList.replace('bg-slate-100', 'bg-red-100');
-                DOM.sttBtn.classList.replace('text-slate-700', 'text-red-700');
-            };
-
-            recognition.onresult = (event) => {
-                let interimTranscript = '';
-                let finalTranscript = '';
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
-                    else interimTranscript += event.results[i][0].transcript;
-                }
-                if (finalTranscript) {
-                    DOM.stepText.value += (DOM.stepText.value ? ' ' : '') + finalTranscript;
-                }
-            };
-
-            recognition.onerror = (e) => { console.error('Помилка мікрофона', e); stopStt(); };
-            recognition.onend = () => { stopStt(); };
-
-            function stopStt() {
-                isRecognizing = false;
-                DOM.sttIcon.textContent = '🎙️';
-                DOM.sttText.textContent = 'Голос';
-                DOM.sttBtn.classList.replace('bg-red-100', 'bg-slate-100');
-                DOM.sttBtn.classList.replace('text-red-700', 'text-slate-700');
-            }
-
-            DOM.sttBtn.onclick = () => {
-                if (isRecognizing) recognition.stop();
-                else recognition.start();
-            };
-        }
-
-        // ==========================================
-        // ШІ КОРЕКТОР (Gemini) - Логіка з Налаштувань
-        // ==========================================
-        
-        async function checkApiKey() {
-            const key = DOM.apiKeyInput.value.trim();
-            const statusEl = DOM.keyStatusMsg;
-            
-            if (!key) {
-                statusEl.className = 'mt-3 text-xs font-bold flex items-center gap-1.5 text-red-600';
-                statusEl.innerHTML = '⚠️ Ключ не введено';
-                statusEl.classList.remove('hidden');
-                localStorage.removeItem('foodline_inst_apikey');
-                state.apiKey = '';
-                return;
-            }
-
-            statusEl.className = 'mt-3 text-xs font-bold flex items-center gap-1.5 text-slate-500';
-            statusEl.innerHTML = '⏳ З\'єднуюсь з серверами Google...';
-            statusEl.classList.remove('hidden');
-
-            try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-                const data = await res.json();
-                
-                if (res.ok && data.models) {
-                    const modelsCount = data.models.filter(m => m.name.includes("gemini")).length;
-                    statusEl.className = 'mt-3 text-xs font-bold flex items-center gap-1.5 text-green-600';
-                    statusEl.innerHTML = `✅ Супер! Ключ дійсний. Доступно моделей: ${modelsCount}`;
-                    
-                    localStorage.setItem('foodline_inst_apikey', key);
-                    state.apiKey = key;
+                const pass = prompt("Введіть пароль доступу до налаштувань:");
+                if (pass === "5588") {
+                    hideAll(); DOM.viewSet.classList.remove('hidden'); DOM.tabSet.className = actCls;
+                    DOM.setEmail.value = state.settings.email; DOM.setDrive.value = state.settings.driveId; DOM.setApi.value = state.settings.apiKey;
                 } else {
-                    statusEl.className = 'mt-3 text-xs font-bold flex items-center gap-1.5 text-red-600';
-                    statusEl.innerHTML = `⚠️ Помилка доступу: ${data.error?.message || 'Невідома помилка'}`;
-                }
-            } catch (e) {
-                statusEl.className = 'mt-3 text-xs font-bold flex items-center gap-1.5 text-red-600';
-                statusEl.innerHTML = '⚠️ Помилка мережі при перевірці.';
-            }
-        }
-
-        function setupAI() {
-            DOM.apiKeyInput.addEventListener('input', (e) => {
-                state.apiKey = e.target.value;
-                DOM.keyStatusMsg.classList.add('hidden');
-            });
-            DOM.checkKeyBtn.onclick = checkApiKey;
-
-            DOM.aiBtn.onclick = async () => {
-                const text = DOM.stepText.value.trim();
-                if (!text) { showToast("Напишіть або надиктуйте текст", true); return; }
-                
-                let activeKey = state.apiKey.trim();
-                
-                const isProd = window.location.hostname !== "localhost" && window.location.hostname !== "";
-                if (!activeKey && isProd) {
-                    showToast("Потрібен API Ключ! Перейдіть в 'Налаштування'", true);
-                    DOM.tabSet.click();
-                    return;
-                }
-                
-                DOM.aiBtn.innerHTML = `⏳ Обробка...`; 
-                DOM.aiBtn.disabled = true;
-
-                try {
-                    let usedModel = "gemini-2.5-flash-preview-09-2025"; 
-                    
-                    if (activeKey !== "") {
-                        try {
-                            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${activeKey}`);
-                            if (res.ok) {
-                                const data = await res.json();
-                                const availableModels = data.models
-                                    .filter(m => m.supportedGenerationMethods?.includes("generateContent") && m.name.includes("gemini"))
-                                    .map(m => m.name.replace('models/', ''));
-                                    
-                                if (availableModels.length > 0) {
-                                    usedModel = availableModels.find(m => m === 'gemini-1.5-flash') || 
-                                                availableModels.find(m => m.includes('flash')) || 
-                                                availableModels[0];
-                                }
-                            }
-                        } catch (e) { console.warn("Не вдалося підтягнути список моделей"); }
-                    }
-
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${usedModel}:generateContent?key=${activeKey}`;
-                    const payload = {
-                        contents: [{ parts: [{ text: `Виправ граматичні помилки, покращ стиль та зроби текст максимально професійним для технічної інструкції на виробництві. Поверни лише виправлений текст без коментарів.\n\nТекст: ${text}` }] }],
-                        systemInstruction: { parts: [{ text: "Ти експерт та редактор технічної документації. Мова: українська." }] }
-                    };
-
-                    const response = await fetch(url, {
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!response.ok) {
-                        if (response.status === 400 || response.status === 401 || response.status === 403) {
-                            throw new Error("AuthError");
-                        }
-                        throw new Error(`HTTP Error: ${response.status}`);
-                    }
-                    
-                    const data = await response.json();
-                    const correctedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                    
-                    if (correctedText) { 
-                        DOM.stepText.value = correctedText.trim(); 
-                        showToast("Текст покращено!"); 
-                    } else {
-                        throw new Error("Некоректна відповідь ШІ");
-                    }
-                } catch (err) { 
-                    if (err.message === "AuthError") {
-                        showToast("Невірний API-ключ! Оновіть його в Налаштуваннях", true);
-                        DOM.tabSet.click();
-                    } else {
-                        showToast("Помилка ШІ. Перевірте Інтернет", true); 
-                    }
-                    console.error("Помилка ШІ:", err);
-                } finally { 
-                    DOM.aiBtn.innerHTML = `✨ ШІ`; 
-                    DOM.aiBtn.disabled = false; 
+                    if (pass !== null) showToast("Невірний пароль!", true);
                 }
             };
         }
 
-        // ==========================================
-        // ЛОГІКА КРОКІВ ТА ЗБЕРЕЖЕННЯ
-        // ==========================================
-        function setupButtons() {
-            DOM.addStepBtn.onclick = () => {
-                const text = DOM.stepText.value.trim();
-                if (!text && !tempMedia.image && !tempMedia.videoUrl) return;
-                
-                state.title = DOM.title.value; state.equipment = DOM.eq.value;
-                state.steps.push({
-                    id: crypto.randomUUID(),
-                    text: text,
-                    image: tempMedia.image,
-                    videoUrl: tempMedia.videoUrl
+        // ================= ФОТО/ВІДЕО (Стиснення) =================
+        function processImageFile(file, callback) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX = 800; // Стиснення
+                    const scale = Math.min(MAX / img.width, MAX / img.height, 1);
+                    canvas.width = img.width * scale; canvas.height = img.height * scale;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    callback(canvas.toDataURL('image/jpeg', 0.6));
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function setupMediaInputs() {
+            // Головне фото
+            DOM.mainImgInp.onchange = (e) => {
+                processImageFile(e.target.files[0], (dataUrl) => {
+                    state.mainImage = dataUrl;
+                    DOM.mainImgPrev.src = dataUrl; DOM.mainImgBox.classList.remove('hidden');
                 });
-                
-                DOM.stepText.value = ''; DOM.clearMedia.click();
-                renderSteps();
             };
+            DOM.removeMainImg.onclick = () => { state.mainImage = null; DOM.mainImgBox.classList.add('hidden'); DOM.mainImgPrev.src = ''; DOM.mainImgInp.value = ''; };
 
-            DOM.btnNewDoc.onclick = () => {
-                state = { ...state, docId: crypto.randomUUID(), title: '', equipment: '', steps: [] };
-                DOM.title.value = ''; DOM.eq.value = ''; DOM.stepText.value = ''; DOM.clearMedia.click();
-                DOM.tabEd.click();
+            // Фото Вузла
+            DOM.nodeImgInp.onchange = (e) => {
+                processImageFile(e.target.files[0], (dataUrl) => {
+                    tempNodeImage = dataUrl;
+                    DOM.nodeImgPrev.src = dataUrl; DOM.nodeImgPrevBox.classList.remove('hidden');
+                });
             };
+            DOM.removeNodeImg.onclick = () => { tempNodeImage = null; DOM.nodeImgPrevBox.classList.add('hidden'); DOM.nodeImgInp.value = ''; };
 
-            DOM.pdfBtn.onclick = () => window.print();
-
-            DOM.saveBtn.onclick = async () => {
-                state.title = DOM.title.value.trim(); state.equipment = DOM.eq.value.trim();
-                if (!state.title) { showToast("Введіть назву інструкції", true); return; }
-                if (state.steps.length === 0) { showToast("Додайте хоча б один крок", true); return; }
-
-                const docData = { id: state.docId, title: state.title, equipment: state.equipment, steps: state.steps, date: Date.now() };
-                const existingIdx = state.archive.findIndex(a => a.id === state.docId);
-                if (existingIdx > -1) state.archive[existingIdx] = docData; else state.archive.unshift(docData);
-                localStorage.setItem('foodline_instructions', JSON.stringify(state.archive));
-
-                if (!navigator.onLine) {
-                    showToast("Збережено локально. Немає інтернету.", true);
-                    return;
-                }
-
-                DOM.saveBtn.innerHTML = `⏳ Відправка...`;
-                DOM.saveBtn.disabled = true;
-                
-                try {
-                    // Формуємо payload з базовим текстом і масивом base64 зображень
-                    const payload = {
-                        action: "save_instruction",
-                        id: state.docId,
-                        title: state.title,
-                        equipment: state.equipment,
-                        date: new Date().toLocaleString('uk-UA'),
-                        steps_text: state.steps.map((s, i) => `${i+1}. ${s.text || ''}`).join('\n'),
-                        images: state.steps.map(s => s.image || '').filter(img => img !== '') // Передаємо стиснуті фото
-                    };
-
-                    await fetch(GOOGLE_SCRIPT_URL, {
-                        method: 'POST',
-                        mode: 'no-cors', 
-                        body: JSON.stringify(payload),
-                        headers: { 'Content-Type': 'application/json' }
+            // Фото Кроку (Множинне)
+            DOM.modalPhotoInp.onchange = (e) => {
+                Array.from(e.target.files).forEach(file => {
+                    processImageFile(file, (dataUrl) => {
+                        tempStepImages.push(dataUrl);
+                        updateModalMediaUI();
                     });
-                    showToast("Успішно відправлено в Таблицю!");
-                } catch (e) {
-                    showToast("Збережено локально. Помилка відправки.", true);
-                } finally {
-                    DOM.saveBtn.innerHTML = `☁️ В Таблицю`;
-                    DOM.saveBtn.disabled = false;
-                }
+                });
+                DOM.modalPhotoInp.value = '';
             };
+
+            // Відео Кроку
+            DOM.modalVideoInp.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                tempStepVideoUrl = URL.createObjectURL(file);
+                DOM.modalVideoPrev.classList.remove('hidden');
+            };
+            DOM.removeModalVideo.onclick = () => { tempStepVideoUrl = null; DOM.modalVideoPrev.classList.add('hidden'); DOM.modalVideoInp.value = ''; };
         }
 
-        function renderSteps() {
-            DOM.title.value = state.title; DOM.eq.value = state.equipment;
-            if (state.steps.length === 0) {
-                DOM.stepsCont.innerHTML = ''; return;
-            }
-            
-            DOM.stepsCont.innerHTML = state.steps.map((step, index) => `
-                <div class="card p-4 sm:p-5 rounded-2xl shadow-sm relative group border-l-4 border-l-emerald-500 mb-4 transition-all step-item">
-                    <span class="absolute -left-[14px] top-4 bg-emerald-500 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ring-4 ring-slate-50">
-                        ${index + 1}
-                    </span>
-                    <div class="pl-2 sm:pl-4">
-                        ${step.text ? `<p class="text-slate-800 whitespace-pre-wrap mb-3 text-base/relaxed font-medium">${step.text}</p>` : ''}
-                        ${step.image ? `<img src="${step.image}" class="max-w-full md:max-w-sm h-auto rounded-xl mb-3 shadow-sm border border-slate-100 object-contain" />` : ''}
-                        ${step.videoUrl ? `<div class="mb-3 no-print border border-slate-200 rounded-xl overflow-hidden max-w-sm"><video src="${step.videoUrl}" controls class="w-full bg-black max-h-64"></video></div>` : ''}
+        function updateModalMediaUI() {
+            if(tempStepImages.length > 0) {
+                DOM.modalMediaPrev.classList.remove('hidden');
+                DOM.modalMediaPrev.innerHTML = tempStepImages.map((src, i) => `
+                    <div class="relative inline-block mt-2">
+                        <img src="${src}" class="h-20 w-20 object-cover rounded-lg shadow-sm border border-slate-200">
+                        <button onclick="removeTempStepImage(${i})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold text-xs shadow hover:bg-red-600">✕</button>
                     </div>
-                    <button data-id="${step.id}" class="delete-step-btn absolute right-2 top-2 p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all no-print" title="Видалити">🗑️</button>
+                `).join('');
+            } else {
+                DOM.modalMediaPrev.classList.add('hidden'); DOM.modalMediaPrev.innerHTML = '';
+            }
+        }
+        window.removeTempStepImage = (idx) => { tempStepImages.splice(idx, 1); updateModalMediaUI(); };
+
+        // ================= РЕНДЕР ВУЗЛІВ ТА КРОКІВ =================
+        DOM.addNodeBtn.onclick = () => {
+            const t = DOM.nodeTitle.value.trim();
+            if(!t && !tempNodeImage) return showToast("Введіть назву вузла або додайте фото", true);
+            
+            state.nodes.push({ id: crypto.randomUUID(), title: t, desc: DOM.nodeDesc.value.trim(), image: tempNodeImage, steps: [] });
+            
+            DOM.nodeTitle.value = ''; DOM.nodeDesc.value = ''; tempNodeImage = null; DOM.nodeImgPrevBox.classList.add('hidden');
+            renderNodes(); saveLocal();
+        };
+
+        function renderNodes() {
+            DOM.title.value = state.title; DOM.eq.value = state.equipment;
+            if(state.mainImage) { DOM.mainImgPrev.src = state.mainImage; DOM.mainImgBox.classList.remove('hidden'); }
+            else { DOM.mainImgBox.classList.add('hidden'); }
+            
+            DOM.nodesCont.innerHTML = state.nodes.map((node, nIdx) => `
+                <div class="card p-4 sm:p-5 rounded-2xl shadow-sm border-l-4 border-l-indigo-500 relative bg-white">
+                    <button onclick="confirmDeleteNode('${node.id}')" class="absolute top-3 right-3 text-slate-300 hover:text-red-500 bg-red-50 p-2 rounded-lg transition-colors" title="Видалити вузол">🗑️</button>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4 mb-4 border-b border-slate-100 pb-4">
+                        ${node.image ? `<img src="${node.image}" class="w-full sm:w-1/3 max-w-[200px] h-32 object-cover rounded-xl shadow-sm border border-slate-200">` : ''}
+                        <div class="flex-1 pr-10">
+                            <h3 class="text-xl font-bold text-slate-800">${node.title || 'Без назви'}</h3>
+                            ${node.desc ? `<p class="text-slate-600 text-sm mt-1 whitespace-pre-wrap">${node.desc}</p>` : ''}
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 pl-2 sm:pl-6">
+                        ${node.steps.map((step, sIdx) => `
+                            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 relative group">
+                                <button onclick="editStep('${node.id}', '${step.id}')" class="absolute top-2 right-12 text-slate-400 hover:text-emerald-500 bg-white p-1.5 rounded shadow-sm transition-colors" title="Редагувати">✏️</button>
+                                <button onclick="confirmDeleteStep('${node.id}', '${step.id}')" class="absolute top-2 right-2 text-slate-400 hover:text-red-500 bg-white p-1.5 rounded shadow-sm transition-colors" title="Видалити">🗑️</button>
+                                
+                                <div class="flex gap-3 items-start mt-4 sm:mt-0">
+                                    <span class="bg-emerald-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow">${sIdx+1}</span>
+                                    <div class="flex-1 pr-4">
+                                        ${step.text ? `<p class="text-slate-800 text-sm whitespace-pre-wrap mb-3 leading-relaxed">${step.text}</p>` : ''}
+                                        ${step.images && step.images.length ? `<div class="flex flex-wrap gap-2 mb-2">${step.images.map(i=>`<img src="${i}" class="h-24 rounded-lg border border-slate-200 shadow-sm object-cover">`).join('')}</div>` : ''}
+                                        ${step.videoUrl ? `<div class="mt-2 border border-slate-200 rounded-lg overflow-hidden max-w-sm"><video src="${step.videoUrl}" controls class="w-full bg-black max-h-48"></video></div>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                        
+                        <button onclick="openStepModal('${node.id}')" class="mt-4 text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl flex items-center gap-2 transition-colors border border-indigo-100">
+                            ➕ Додати дію (налаштування)
+                        </button>
+                    </div>
                 </div>
             `).join('');
+        }
 
-            document.querySelectorAll('.delete-step-btn').forEach(btn => {
-                btn.onclick = (e) => {
-                    state.steps = state.steps.filter(s => s.id !== e.currentTarget.getAttribute('data-id'));
-                    renderSteps();
-                };
+        window.confirmDeleteNode = (id) => { if(confirm("Ви впевнені, що хочете видалити цей вузол та всі його кроки?")) { state.nodes = state.nodes.filter(n=>n.id!==id); renderNodes(); saveLocal(); } };
+        window.confirmDeleteStep = (nId, sId) => { 
+            if(confirm("Ви впевнені, що хочете видалити цей крок?")) { 
+                const node = state.nodes.find(n=>n.id===nId); 
+                if(node) { node.steps = node.steps.filter(s=>s.id!==sId); renderNodes(); saveLocal(); } 
+            } 
+        };
+
+        // ================= МОДАЛКА КРОКУ =================
+        window.openStepModal = (nodeId) => {
+            activeNodeIdForStep = nodeId; editingStepId = null;
+            DOM.modalText.value = ''; tempStepImages = []; tempStepVideoUrl = null; 
+            updateModalMediaUI(); DOM.modalVideoPrev.classList.add('hidden');
+            DOM.stepModal.classList.remove('hidden');
+        };
+        
+        window.editStep = (nId, sId) => {
+            activeNodeIdForStep = nId; editingStepId = sId;
+            const step = state.nodes.find(n=>n.id===nId).steps.find(s=>s.id===sId);
+            DOM.modalText.value = step.text || '';
+            tempStepImages = step.images ? [...step.images] : [];
+            tempStepVideoUrl = step.videoUrl || null;
+            
+            updateModalMediaUI();
+            if(tempStepVideoUrl) DOM.modalVideoPrev.classList.remove('hidden'); else DOM.modalVideoPrev.classList.add('hidden');
+            DOM.stepModal.classList.remove('hidden');
+        };
+        
+        DOM.closeStepModal.onclick = () => DOM.stepModal.classList.add('hidden');
+        DOM.modalClearBtn.onclick = () => { 
+            DOM.modalText.value = ''; tempStepImages = []; tempStepVideoUrl = null; 
+            updateModalMediaUI(); DOM.modalVideoPrev.classList.add('hidden'); 
+        };
+        
+        DOM.modalSaveBtn.onclick = () => {
+            const txt = DOM.modalText.value.trim();
+            if(!txt && !tempStepImages.length && !tempStepVideoUrl) return showToast("Додайте текст, фото або відео", true);
+            
+            const node = state.nodes.find(n=>n.id===activeNodeIdForStep);
+            if(node) {
+                if(editingStepId) {
+                    const step = node.steps.find(s=>s.id===editingStepId);
+                    step.text = txt; step.images = [...tempStepImages]; step.videoUrl = tempStepVideoUrl;
+                } else {
+                    node.steps.push({ id: crypto.randomUUID(), text: txt, images: [...tempStepImages], videoUrl: tempStepVideoUrl });
+                }
+                DOM.stepModal.classList.add('hidden'); renderNodes(); saveLocal();
+            }
+        };
+
+        // ================= ШІ ТА ГОЛОС =================
+        let isRec = false;
+        let originalSessionText = '';
+        const sr = window.SpeechRecognition || window.webkitSpeechRecognition ? new (window.SpeechRecognition || window.webkitSpeechRecognition)() : null;
+        if(sr) { sr.lang = 'uk-UA'; sr.continuous = true; sr.interimResults = true; }
+
+        DOM.modalSttBtn.onclick = () => {
+            if(!sr) return showToast("Голосовий ввід не підтримується цим браузером", true);
+            if(isRec) { sr.stop(); } else { sr.start(); }
+        };
+        
+        if(sr) {
+            sr.onstart = () => { 
+                isRec = true; 
+                originalSessionText = DOM.modalText.value.trim();
+                DOM.modalSttBtn.classList.add('bg-red-100', 'text-red-700'); DOM.modalSttBtn.innerHTML = '🔴 Слухаю...'; 
+            };
+            sr.onresult = (e) => {
+                let res = ''; for (let i = 0; i < e.results.length; ++i) res += e.results[i][0].transcript;
+                DOM.modalText.value = originalSessionText ? `${originalSessionText} ${res}` : res;
+            };
+            sr.onend = () => { 
+                isRec = false; 
+                DOM.modalSttBtn.classList.remove('bg-red-100', 'text-red-700'); DOM.modalSttBtn.innerHTML = '🎙️ Голос'; 
+            };
+            sr.onerror = (e) => { console.error('Помилка мікрофона:', e); };
+        }
+
+        DOM.modalAiBtn.onclick = async () => {
+            const txt = DOM.modalText.value.trim();
+            if(!txt) return showToast("Спочатку напишіть або надиктуйте текст", true);
+            const key = state.settings.apiKey;
+            if(!key) return showToast("Додайте ключ Gemini API в Налаштуваннях", true);
+            
+            DOM.modalAiBtn.innerHTML = "⏳..."; DOM.modalAiBtn.disabled = true;
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${key}`, {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({ contents: [{parts:[{text:`Виправ граматичні помилки та покращ технічний стиль. Поверни лише готовий текст без коментарів.\n\n${txt}`}]}], systemInstruction: { parts: [{ text: "Ти експерт з технічної документації. Мова: українська." }] } })
+                });
+                const data = await res.json();
+                if(data.candidates) { DOM.modalText.value = data.candidates[0].content.parts[0].text.trim(); showToast("Текст успішно покращено!"); }
+            } catch(e) { showToast("Помилка зв'язку з ШІ", true); }
+            finally { DOM.modalAiBtn.innerHTML = "✨ ШІ"; DOM.modalAiBtn.disabled = false; }
+        };
+
+        // ================= ЕКСПОРТ (Таблиця для PDF) =================
+        function generatePDFHtml() {
+            state.title = DOM.title.value.trim(); state.equipment = DOM.eq.value.trim();
+            document.getElementById('pdf-doc-title').textContent = state.title || 'Інструкція з налаштування';
+            document.getElementById('pdf-doc-eq').textContent = state.equipment ? `Обладнання: ${state.equipment}` : '';
+            
+            const pdfMain = document.getElementById('pdf-main-image');
+            if(state.mainImage) { pdfMain.src = state.mainImage; pdfMain.style.display = 'inline-block'; } 
+            else { pdfMain.style.display = 'none'; }
+
+            const tbody = document.getElementById('pdf-table-body');
+            tbody.innerHTML = '';
+
+            state.nodes.forEach(node => {
+                // Якщо у вузла немає кроків
+                if (!node.steps || node.steps.length === 0) {
+                    let tr = document.createElement('tr');
+                    
+                    let tdNode = document.createElement('td');
+                    tdNode.innerHTML = `<strong style="font-size:14px;">${node.title}</strong><br><span style="font-size:11px; color:#555;">${node.desc||''}</span>`;
+                    if(node.image) tdNode.innerHTML += `<br><img src="${node.image}" class="pdf-node-img">`;
+                    
+                    let tdAction = document.createElement('td');
+                    let tdPhotos = document.createElement('td');
+                    
+                    tr.appendChild(tdNode); tr.appendChild(tdAction); tr.appendChild(tdPhotos);
+                    tbody.appendChild(tr);
+                } else {
+                    // Якщо кроки є - використовуємо rowSpan для колонки "Вузол"
+                    node.steps.forEach((step, idx) => {
+                        let tr = document.createElement('tr');
+                        
+                        // Комірку Вузла додаємо ТІЛЬКИ в перший рядок серії кроків
+                        if (idx === 0) {
+                            let tdNode = document.createElement('td');
+                            tdNode.rowSpan = node.steps.length;
+                            tdNode.innerHTML = `<strong style="font-size:14px;">${node.title}</strong><br><span style="font-size:11px; color:#555; display:block; margin-top:4px;">${node.desc||''}</span>`;
+                            if(node.image) tdNode.innerHTML += `<br><img src="${node.image}" class="pdf-node-img">`;
+                            tr.appendChild(tdNode);
+                        }
+                        
+                        let tdAction = document.createElement('td');
+                        tdAction.innerHTML = step.text ? step.text.replace(/\n/g, '<br>') : '';
+                        
+                        let tdPhotos = document.createElement('td');
+                        if (step.images && step.images.length) {
+                            tdPhotos.innerHTML = step.images.map(img => `<img src="${img}" class="pdf-step-img">`).join('');
+                        }
+                        
+                        tr.appendChild(tdAction);
+                        tr.appendChild(tdPhotos);
+                        tbody.appendChild(tr);
+                    });
+                }
             });
         }
 
-        function loadLocalArchive() {
-            const saved = localStorage.getItem('foodline_instructions');
-            if (saved) state.archive = JSON.parse(saved);
+        // ================= ДІЇ ТА ЗБЕРЕЖЕННЯ =================
+        DOM.saveSetBtn.onclick = () => {
+            state.settings = { email: DOM.setEmail.value.trim(), driveId: DOM.setDrive.value.trim(), apiKey: DOM.setApi.value.trim() };
+            saveLocal(); showToast("Налаштування успішно збережено");
+        };
+
+        function saveLocal() {
+            state.title = DOM.title.value.trim(); state.equipment = DOM.eq.value.trim();
+            const docData = { id: state.docId, title: state.title, equipment: state.equipment, mainImage: state.mainImage, nodes: state.nodes, date: Date.now() };
+            const idx = state.archive.findIndex(a => a.id === state.docId);
+            if (idx > -1) state.archive[idx] = docData; else if(state.title || state.nodes.length) state.archive.unshift(docData);
+            
+            localStorage.setItem('foodline_data', JSON.stringify({ archive: state.archive, settings: state.settings }));
+        }
+
+        function loadData() {
+            try {
+                const saved = JSON.parse(localStorage.getItem('foodline_data'));
+                if(saved) {
+                    if(saved.archive) state.archive = saved.archive;
+                    if(saved.settings) state.settings = saved.settings;
+                }
+            } catch(e){}
         }
 
         function renderArchive() {
-            if (state.archive.length === 0) {
-                DOM.archiveList.innerHTML = `<div class="text-center text-slate-400 py-8 card rounded-2xl">Архів порожній</div>`;
-                return;
-            }
+            if (state.archive.length === 0) return DOM.archiveList.innerHTML = `<div class="text-center text-slate-400 py-8 card rounded-xl">Архів порожній</div>`;
             DOM.archiveList.innerHTML = state.archive.map(ins => `
-                <div class="card p-4 sm:p-5 rounded-2xl shadow-sm cursor-pointer hover:border-emerald-400 hover:shadow-md transition-all archive-item" data-id="${ins.id}">
-                    <h3 class="font-bold text-lg text-slate-800">${ins.title}</h3>
-                    <p class="text-slate-500 text-sm mt-1 flex items-center gap-1">⚙️ ${ins.equipment || 'Не вказано'}</p>
-                    <div class="flex justify-between items-center mt-3 pt-3 border-t border-slate-100">
-                        <span class="text-slate-400 text-xs font-bold bg-slate-100 px-2 py-1 rounded-md">Кроків: ${ins.steps?.length || 0}</span>
-                        <span class="text-slate-400 text-xs">${new Date(ins.date).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                <div class="card p-4 rounded-xl cursor-pointer hover:border-emerald-400 archive-item transition-all hover:shadow-md" data-id="${ins.id}">
+                    <h3 class="font-bold text-lg text-slate-800">${ins.title || 'Без назви'}</h3>
+                    <p class="text-slate-500 text-sm mt-1">⚙️ ${ins.equipment || 'Не вказано'}</p>
+                    <div class="flex justify-between items-center mt-3 pt-3 border-t border-slate-100 text-xs text-slate-400">
+                        <span class="bg-slate-100 px-2 py-1 rounded-md font-bold text-slate-500">Вузлів: ${ins.nodes?.length||0}</span>
+                        <span>${new Date(ins.date).toLocaleDateString()}</span>
                     </div>
                 </div>
             `).join('');
-
-            document.querySelectorAll('.archive-item').forEach(el => {
-                el.onclick = (e) => {
-                    const item = state.archive.find(a => a.id === e.currentTarget.getAttribute('data-id'));
-                    if (item) {
-                        state.docId = item.id; state.title = item.title; state.equipment = item.equipment; state.steps = item.steps;
-                        DOM.tabEd.click();
-                    }
-                };
+            
+            document.querySelectorAll('.archive-item').forEach(el => el.onclick = (e) => {
+                const doc = state.archive.find(a => a.id === e.currentTarget.getAttribute('data-id'));
+                if(doc) { 
+                    state.docId=doc.id; state.title=doc.title; state.equipment=doc.equipment; state.mainImage=doc.mainImage; state.nodes=doc.nodes||[]; 
+                    DOM.tabEd.click(); 
+                }
             });
         }
+        document.getElementById('btn-new-doc').onclick = () => {
+            state.docId = crypto.randomUUID(); state.title = ''; state.equipment = ''; state.mainImage = null; state.nodes = [];
+            DOM.title.value = ''; DOM.eq.value = '';
+            DOM.tabEd.click();
+        };
 
-        // Запуск
+        function setupButtons() {
+            document.getElementById('pdf-btn').onclick = () => {
+                saveLocal();
+                generatePDFHtml();
+                document.body.classList.add('pdf-export-mode');
+                setTimeout(() => { window.print(); document.body.classList.remove('pdf-export-mode'); }, 500);
+            };
+
+            document.getElementById('email-btn').onclick = async () => {
+                saveLocal();
+                if(!state.title || !state.nodes.length) return showToast("Спочатку створіть інструкцію", true);
+                if(!state.settings.email) {
+                    showToast("Вкажіть Email в налаштуваннях!", true);
+                    return DOM.tabSet.click();
+                }
+                
+                const btn = document.getElementById('email-btn');
+                btn.innerHTML = `<span class="text-lg">⏳</span> Відправка...`; btn.disabled = true;
+
+                try {
+                    generatePDFHtml(); document.body.classList.add('pdf-export-mode');
+                    const pdfBase64 = await html2pdf().set({
+                        margin: 10, filename: `${state.title}.pdf`, image: { type: 'jpeg', quality: 0.85 },
+                        html2canvas: { scale: 1.5, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                    }).from(document.getElementById('pdf-template')).output('datauristring');
+                    document.body.classList.remove('pdf-export-mode');
+
+                    const payload = {
+                        action: "send_report",
+                        title: state.title, eq: state.equipment, email: state.settings.email, driveId: state.settings.driveId,
+                        pdfBase64: pdfBase64
+                    };
+
+                    await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+                    showToast("Звіт успішно відправлено!");
+                } catch (e) { showToast("Помилка відправки", true); document.body.classList.remove('pdf-export-mode'); }
+                finally { btn.innerHTML = `<span class="text-lg">📧</span> На пошту`; btn.disabled = false; }
+            };
+
+            document.getElementById('save-sheets-btn').onclick = () => {
+                saveLocal();
+                showToast("Дані збережено локально. Використовуйте пошту/друк для експорту.");
+            };
+        }
+
         document.addEventListener('DOMContentLoaded', initApp);
-
     </script>
 </body>
 </html>
