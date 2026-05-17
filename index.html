@@ -36,14 +36,14 @@
         body.pdf-export-mode { background-color: white !important; }
         body.pdf-export-mode #pdf-template { display: block !important; }
 
-        /* Таблиця для PDF */
-        .pdf-table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: sans-serif; }
-        .pdf-table th, .pdf-table td { border: 1px solid #000; padding: 10px; vertical-align: top; }
-        .pdf-table th { background-color: #f8fafc; text-align: left; font-weight: bold; }
-        .pdf-node-img { max-width: 100%; max-height: 250px; object-fit: contain; margin-top: 10px; display: block; }
-        .pdf-step-img { max-width: 160px; max-height: 160px; object-fit: contain; margin: 4px; border: 1px solid #e2e8f0; border-radius: 4px; }
+        /* Таблиця для PDF згідно зі зразком */
+        .pdf-table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: sans-serif; margin-top: 10px; }
+        .pdf-table th, .pdf-table td { border: 1px solid #000000 !important; padding: 8px 10px; vertical-align: top; text-align: left; }
+        .pdf-table th { background-color: #f1f5f9 !important; font-weight: bold; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .pdf-node-img { max-width: 100%; max-height: 200px; object-fit: contain; margin-top: 8px; display: block; border-radius: 4px; border: 1px solid #ccc; }
+        .pdf-step-img { max-width: 100%; max-height: 120px; object-fit: contain; margin: 4px 0; display: block; border-radius: 4px; border: 1px solid #ccc; }
         
-        #pdf-main-image { width: 100%; height: 350px; object-fit: contain; margin-bottom: 20px; }
+        #pdf-main-image { width: 100%; height: 320px; max-height: 320px; object-fit: contain; margin-bottom: 20px; }
         .page-break { page-break-before: always; }
     </style>
 </head>
@@ -240,21 +240,39 @@
         <div id="image-editor-container" class="flex-1 w-full bg-slate-900"></div>
     </div>
 
-    <!-- ПРИХОВАНИЙ ШАБЛОН ДЛЯ PDF -->
-    <div id="pdf-template" class="hidden w-full max-w-4xl mx-auto p-8 bg-white">
-        <h1 id="pdf-doc-title" class="text-3xl font-bold text-center mb-2 text-slate-900"></h1>
-        <h3 id="pdf-doc-eq" class="text-xl text-center text-slate-600 mb-6 font-medium"></h3>
-        
-        <div class="mb-8 text-center">
-            <img id="pdf-main-image" src="" style="height: 350px; max-height: 350px; object-fit: contain; width: 100%; display: none;">
+    <!-- ПРИХОВАНИЙ ШАБЛОН ДЛЯ PDF (Оновлений для ідеального друку) -->
+    <div id="pdf-template" class="hidden w-full max-w-4xl mx-auto p-8 bg-white text-black">
+        <!-- Сторінка 1: Титульний аркуш інструкції -->
+        <div class="pdf-cover-page flex flex-col justify-between" style="min-height: 290mm; box-sizing: border-box; padding-bottom: 40px;">
+            <div class="pdf-header-container border-b-2 border-black pb-4 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-xs font-bold tracking-wider text-slate-400">FOOD LINE PRODUCTION</span>
+                    <span class="text-xs font-bold text-slate-400">ТЕХНІЧНА ІНСТРУКЦІЯ</span>
+                </div>
+                <h1 id="pdf-doc-title" class="text-3xl font-bold text-slate-950 mb-2"></h1>
+                <h3 id="pdf-doc-eq" class="text-xl text-slate-600 font-medium"></h3>
+            </div>
+            
+            <div class="my-auto text-center" id="pdf-main-image-container">
+                <!-- Головне фото строго по центру, займає 1/3 сторінки -->
+                <img id="pdf-main-image" src="" style="height: 350px; max-height: 350px; object-fit: contain; width: 100%; border: 1px solid #000; padding: 4px; border-radius: 8px; display: inline-block;">
+            </div>
+            
+            <div class="text-right text-xs text-slate-400 border-t border-slate-200 pt-4 mt-8">
+                <span>Food Line Production © Звіт створено автоматично</span>
+            </div>
         </div>
+        
+        <!-- Роздільник сторінки: Таблиця налаштувань почнеться на Сторінці 2 -->
+        <div class="page-break" style="page-break-before: always;"></div>
 
+        <!-- Таблиця налаштувань (Сторінка 2+) -->
         <table class="pdf-table" id="pdf-table-content">
             <thead>
                 <tr>
-                    <th style="width: 30%;">Вузол / Частина обладнання</th>
-                    <th style="width: 45%;">Дія</th>
-                    <th style="width: 25%;">Фото</th>
+                    <th style="width: 30%; font-size: 13px; text-transform: uppercase;">Вузол / Частина обладнання</th>
+                    <th style="width: 45%; font-size: 13px; text-transform: uppercase;">Дія (налаштування)</th>
+                    <th style="width: 25%; font-size: 13px; text-transform: uppercase;">Фото</th>
                 </tr>
             </thead>
             <tbody id="pdf-table-body"></tbody>
@@ -273,6 +291,7 @@
     <div id="toast" class="fixed top-5 right-5 left-5 sm:left-auto bg-slate-800 text-white py-3 px-6 rounded-xl shadow-2xl transform -translate-y-20 opacity-0 transition-all z-[110] font-bold text-center pointer-events-none"></div>
 
     <script>
+        // Посилання на Google Apps Script
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwzrXfxDRxrx4nMPEeHH0jgxGY9_uNv4Hdrx9ZhJVryjC_SHSnESC6_7-MqwOenxINIlQ/exec'; 
 
         let state = {
@@ -321,7 +340,7 @@
 
         function showToast(msg, isError = false) {
             DOM.toast.textContent = msg;
-            DOM.toast.className = `fixed top-5 right-5 left-5 sm:left-auto bg-${isError?'red-500':'emerald-600'} text-white py-3 px-6 rounded-xl shadow-2xl transition-all z-[110] font-bold text-center`;
+            DOM.toast.className = `fixed top-5 right-5 left-5 sm:left-auto bg-${isError?'red-500':'emerald-600'} text-white py-3 px-6 rounded-xl shadow-2xl transition-all z-[110] font-bold text-center pointer-events-none`;
             DOM.toast.style.opacity = '1'; DOM.toast.style.transform = 'translateY(0)';
             setTimeout(() => { DOM.toast.style.opacity = '0'; DOM.toast.style.transform = 'translateY(-2rem)'; }, 3000);
         }
@@ -365,7 +384,7 @@
                     canvas.width = img.width * scale; canvas.height = img.height * scale;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    callback(canvas.toDataURL('image/jpeg', 0.8)); // Залишаємо хорошу якість для малювання
+                    callback(canvas.toDataURL('image/jpeg', 0.8)); 
                 };
                 img.src = e.target.result;
             };
@@ -400,7 +419,7 @@
 
         // ================= РЕДАКТОР ЗОБРАЖЕНЬ (FILEROBOT) =================
         let filerobotEditor = null;
-        let activeImageTarget = null; // { type: 'main'|'node'|'step', index: number|null }
+        let activeImageTarget = null; 
 
         window.openImageEditorFor = (type, index = null) => {
             let sourceImg = '';
@@ -412,7 +431,7 @@
             
             activeImageTarget = { type, index };
             DOM.imgEditorModal.classList.remove('hidden');
-            document.getElementById('image-editor-container').innerHTML = ''; // Очищаємо попередній
+            document.getElementById('image-editor-container').innerHTML = ''; 
             
             const FilerobotImageEditor = window.FilerobotImageEditor;
             filerobotEditor = new FilerobotImageEditor(
@@ -441,7 +460,7 @@
                     defaultTabId: 'Annotate',
                     defaultToolId: 'Arrow',
                     annotationsCommon: { fill: '#ff0000', stroke: '#ff0000', strokeWidth: 3 },
-                    Text: { text: 'Ваш текст', fontFamily: 'Arial', fonts: ['Arial', 'Times New Roman'] }
+                    Text: { text: 'Ваш text', fontFamily: 'Arial', fonts: ['Arial', 'Times New Roman'] }
                 }
             );
             filerobotEditor.render();
@@ -452,11 +471,12 @@
             if (filerobotEditor) { filerobotEditor.terminate(); filerobotEditor = null; }
         };
 
-        // ================= ШІ ТА ГОЛОСОВИЙ ВВІД (ГЛОБАЛЬНИЙ) =================
+        // ================= ШІ ТА ГОЛОСОВИЙ ВВІД (СТАБІЛЬНИЙ - БЕЗ ЗАДВОЄННЯ СЛІВ) =================
         let isRec = false; 
         let sttTargetInput = null; 
         let sttTargetBtn = null;
         let sessionBaseText = '';
+        let finalSessionTranscript = ''; // Спеціальний буфер для збереження стабільної історії розпізнавання
         const sr = window.SpeechRecognition || window.webkitSpeechRecognition ? new (window.SpeechRecognition || window.webkitSpeechRecognition)() : null;
         if(sr) { sr.lang = 'uk-UA'; sr.continuous = true; sr.interimResults = true; }
 
@@ -465,30 +485,58 @@
             if(isRec) {
                 sr.stop();
                 if(sttTargetInput !== inputEl) {
-                    setTimeout(() => { sttTargetInput = inputEl; sttTargetBtn = btnEl; sr.start(); }, 300);
+                    setTimeout(() => { 
+                        sttTargetInput = inputEl; 
+                        sttTargetBtn = btnEl; 
+                        finalSessionTranscript = '';
+                        sessionBaseText = inputEl.value.trim();
+                        sr.start(); 
+                    }, 300);
                 }
             } else {
-                sttTargetInput = inputEl; sttTargetBtn = btnEl; sr.start();
+                sttTargetInput = inputEl; 
+                sttTargetBtn = btnEl; 
+                finalSessionTranscript = '';
+                sessionBaseText = inputEl.value.trim();
+                sr.start();
             }
         };
 
         if(sr) {
             sr.onstart = () => { 
                 isRec = true; 
-                sessionBaseText = sttTargetInput.value.trim(); 
+                finalSessionTranscript = '';
                 if(sttTargetBtn) { sttTargetBtn.classList.add('text-red-600'); sttTargetBtn.classList.remove('text-slate-400'); }
                 showToast("🎤 Слухаю...");
             };
             sr.onresult = (e) => { 
-                let interimTranscript = ''; let finalTranscript = '';
+                let interimTranscript = '';
+                let newFinals = '';
+                
+                // Опрацьовуємо тільки нові результати розпізнавання
                 for (let i = e.resultIndex; i < e.results.length; ++i) {
-                    if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript;
-                    else interimTranscript += e.results[i][0].transcript;
+                    const transcript = e.results[i][0].transcript;
+                    if (e.results[i].isFinal) {
+                        newFinals += transcript;
+                    } else {
+                        interimTranscript += transcript;
+                    }
                 }
-                if (finalTranscript) { sessionBaseText += (sessionBaseText ? ' ' : '') + finalTranscript; }
+                
+                if (newFinals) {
+                    finalSessionTranscript += newFinals;
+                }
+                
+                // Формуємо чистий потік слів для поточної сесії
+                let currentSessionText = (finalSessionTranscript + interimTranscript).trim().replace(/\s+/g, ' ');
+
                 if (sttTargetInput) {
-                    sttTargetInput.value = sessionBaseText + (interimTranscript ? ' ' + interimTranscript : '');
-                    sttTargetInput.dispatchEvent(new Event('input')); // Auto-save trigger
+                    let combined = sessionBaseText;
+                    if (currentSessionText) {
+                        combined += (combined ? ' ' : '') + currentSessionText;
+                    }
+                    sttTargetInput.value = combined;
+                    sttTargetInput.dispatchEvent(new Event('input')); 
                 }
             };
             sr.onend = () => { 
@@ -690,21 +738,28 @@
             state.nodes.forEach(node => {
                 if (!node.steps || node.steps.length === 0) {
                     let tr = document.createElement('tr');
-                    let tdNode = document.createElement('td'); tdNode.innerHTML = `<strong style="font-size:14px;">${node.title}</strong><br><span style="font-size:11px; color:#555;">${node.desc||''}</span>`;
+                    let tdNode = document.createElement('td'); tdNode.innerHTML = `<strong style="font-size:14px; color:#0f172a;">${node.title}</strong><br><span style="font-size:11px; color:#475569; display:block; margin-top:4px;">${node.desc||''}</span>`;
                     if(node.image) tdNode.innerHTML += `<br><img src="${node.image}" class="pdf-node-img">`;
-                    tr.appendChild(tdNode); tr.appendChild(document.createElement('td')); tr.appendChild(document.createElement('td')); tbody.appendChild(tr);
+                    
+                    tr.appendChild(tdNode); 
+                    tr.appendChild(document.createElement('td')); 
+                    tr.appendChild(document.createElement('td')); 
+                    tbody.appendChild(tr);
                 } else {
                     node.steps.forEach((step, idx) => {
                         let tr = document.createElement('tr');
+                        // Вузол додаємо тільки до першого кроку для rowSpan
                         if (idx === 0) {
                             let tdNode = document.createElement('td'); tdNode.rowSpan = node.steps.length;
-                            tdNode.innerHTML = `<strong style="font-size:14px;">${node.title}</strong><br><span style="font-size:11px; color:#555; display:block; margin-top:4px;">${node.desc||''}</span>`;
+                            tdNode.innerHTML = `<strong style="font-size:14px; color:#0f172a;">${node.title}</strong><br><span style="font-size:11px; color:#475569; display:block; margin-top:4px;">${node.desc||''}</span>`;
                             if(node.image) tdNode.innerHTML += `<br><img src="${node.image}" class="pdf-node-img">`;
                             tr.appendChild(tdNode);
                         }
                         let tdAction = document.createElement('td'); tdAction.innerHTML = step.text ? step.text.replace(/\n/g, '<br>') : '';
                         let tdPhotos = document.createElement('td');
-                        if (step.images && step.images.length) tdPhotos.innerHTML = step.images.map(img => `<img src="${img}" class="pdf-step-img">`).join('');
+                        if (step.images && step.images.length) {
+                            tdPhotos.innerHTML = step.images.map(img => `<img src="${img}" class="pdf-step-img">`).join('');
+                        }
                         tr.appendChild(tdAction); tr.appendChild(tdPhotos); tbody.appendChild(tr);
                     });
                 }
@@ -722,8 +777,15 @@
                 DOM.emailBtn.innerHTML = `<span class="text-lg">⏳</span> Відправка...`; DOM.emailBtn.disabled = true;
                 try {
                     generatePDFHtml(); document.body.classList.add('pdf-export-mode');
-                    const pdfBase64 = await html2pdf().set({ margin: 10, filename: `${state.title}.pdf`, image: { type: 'jpeg', quality: 0.85 }, html2canvas: { scale: 1.5, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(document.getElementById('pdf-template')).output('datauristring');
+                    const pdfBase64 = await html2pdf().set({ 
+                        margin: 10, 
+                        filename: `${state.title}.pdf`, 
+                        image: { type: 'jpeg', quality: 0.90 }, 
+                        html2canvas: { scale: 2.0, useCORS: true }, 
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
+                    }).from(document.getElementById('pdf-template')).output('datauristring');
                     document.body.classList.remove('pdf-export-mode');
+                    
                     await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "send_report", title: state.title, eq: state.equipment, email: state.settings.email, driveId: state.settings.driveId, pdfBase64: pdfBase64 }) });
                     showToast("Звіт успішно відправлено!");
                 } catch (e) { showToast("Помилка відправки", true); document.body.classList.remove('pdf-export-mode'); }
