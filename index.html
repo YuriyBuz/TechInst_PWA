@@ -80,7 +80,7 @@
                 <div class="relative w-full mb-3">
                     <input type="text" id="doc-title" placeholder="Назва інструкції..." class="w-full text-xl sm:text-2xl font-bold text-slate-800 placeholder-slate-300 bg-transparent border-b border-transparent focus:border-emerald-500 transition-colors py-1 outline-none pr-16">
                     <div class="absolute right-0 top-1/2 -translate-y-1/2 flex gap-1 bg-white/90 rounded-md p-0.5">
-                        <button onclick="toggleGlobalStt(document.getElementById('doc-title'), this)" class="p-1.5 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded transition-colors" title="Голос">🎙️</button>
+                        <button id="title-stt-btn" onclick="toggleGlobalStt(document.getElementById('doc-title'), this)" class="p-1.5 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded transition-colors" title="Голос">🎙️</button>
                         <button onclick="runGlobalAi(document.getElementById('doc-title'), this)" class="p-1.5 text-slate-400 hover:text-purple-500 hover:bg-purple-50 rounded transition-colors" title="ШІ">✨</button>
                     </div>
                 </div>
@@ -89,7 +89,7 @@
                     <span class="font-bold text-sm uppercase text-slate-500 shrink-0">Обладнання:</span>
                     <input type="text" id="doc-eq" placeholder="Вкажіть лінію..." class="flex-1 text-base outline-none placeholder-slate-300 bg-transparent pr-16">
                     <div class="absolute right-0 top-1/2 -translate-y-1/2 flex gap-1 bg-white/90 rounded-md p-0.5">
-                        <button onclick="toggleGlobalStt(document.getElementById('doc-eq'), this)" class="p-1 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded transition-colors" title="Голос">🎙️</button>
+                        <button id="eq-stt-btn" onclick="toggleGlobalStt(document.getElementById('doc-eq'), this)" class="p-1 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded transition-colors" title="Голос">🎙️</button>
                         <button onclick="runGlobalAi(document.getElementById('doc-eq'), this)" class="p-1 text-slate-400 hover:text-purple-500 hover:bg-purple-50 rounded transition-colors" title="ШІ">✨</button>
                     </div>
                 </div>
@@ -101,7 +101,7 @@
                         <button onclick="openImageEditorFor('main')" class="absolute top-2 left-2 bg-blue-500 text-white rounded-lg px-2 py-1 text-xs shadow-md hover:bg-blue-600 hidden group-hover:flex items-center gap-1 transition-all z-10">🖌️ Змінити</button>
                         <button id="remove-main-img" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 shadow-md hover:bg-red-600 font-bold text-xs z-10">✕</button>
                     </div>
-                    <label class="flex items-center justify-center gap-2 px-4 py-3 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl hover:bg-slate-100 cursor-pointer text-slate-600 font-medium transition-colors">
+                    <label id="main-photo-label" class="flex items-center justify-center gap-2 px-4 py-3 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl hover:bg-slate-100 cursor-pointer text-slate-600 font-medium transition-colors">
                         📷 Додати загальне фото
                         <input type="file" id="main-photo-input" accept="image/*" class="hidden">
                     </label>
@@ -120,7 +120,7 @@
                 <div class="relative w-full mb-2">
                     <input type="text" id="node-title" placeholder="Назва вузла (напр. 'Барабан орієнтатора')..." class="input-field pr-16 font-bold text-slate-700 bg-white border-white shadow-sm">
                     <div class="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1 bg-white/90 rounded-md p-0.5">
-                        <button onclick="toggleGlobalStt(document.getElementById('node-title'), this)" class="p-1.5 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded" title="Голос">🎙️</button>
+                        <button id="node-title-stt-btn" onclick="toggleGlobalStt(document.getElementById('node-title'), this)" class="p-1.5 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded" title="Голос">🎙️</button>
                         <button onclick="runGlobalAi(document.getElementById('node-title'), this)" class="p-1.5 text-slate-400 hover:text-purple-500 hover:bg-purple-50 rounded" title="ШІ">✨</button>
                     </div>
                 </div>
@@ -128,13 +128,13 @@
                 <div class="relative w-full mb-2">
                     <textarea id="node-desc" rows="2" class="input-field resize-none pr-16 text-sm bg-white border-white shadow-sm" placeholder="Загальний опис вузла (опціонально)..."></textarea>
                     <div class="absolute right-1 bottom-1 flex gap-1 bg-white/90 rounded-md p-0.5">
-                        <button onclick="toggleGlobalStt(document.getElementById('node-desc'), this)" class="p-1.5 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded" title="Голос">🎙️</button>
+                        <button id="node-desc-stt-btn" onclick="toggleGlobalStt(document.getElementById('node-desc'), this)" class="p-1.5 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded" title="Голос">🎙️</button>
                         <button onclick="runGlobalAi(document.getElementById('node-desc'), this)" class="p-1.5 text-slate-400 hover:text-purple-500 hover:bg-purple-50 rounded" title="ШІ">✨</button>
                     </div>
                 </div>
                 
                 <div class="flex flex-wrap gap-2 items-center justify-between mt-3">
-                    <label class="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 cursor-pointer font-bold text-sm shadow-sm transition-colors">
+                    <label id="node-photo-label" class="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 cursor-pointer font-bold text-sm shadow-sm transition-colors">
                         📷 Фото вузла
                         <input type="file" id="node-photo-input" accept="image/*" class="hidden">
                     </label>
@@ -213,14 +213,14 @@
                 </div>
 
                 <div class="flex flex-wrap gap-2 items-center">
-                    <label class="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer text-sm font-bold shadow-sm transition-colors text-slate-700">
+                    <label id="modal-photo-label" class="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer text-sm font-bold shadow-sm transition-colors text-slate-700">
                         📷 Додати фото
-                        <input type="file" id="modal-photo-input" accept="image/*" capture="environment" multiple class="hidden">
+                        <input type="file" id="modal-photo-input" accept="image/*" multiple class="hidden">
                     </label>
 
-                    <label class="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer text-sm font-bold shadow-sm transition-colors text-slate-700">
+                    <label id="modal-video-label" class="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer text-sm font-bold shadow-sm transition-colors text-slate-700">
                         🎥 Додати відео
-                        <input type="file" id="modal-video-input" accept="video/*" capture="environment" class="hidden">
+                        <input type="file" id="modal-video-input" accept="video/*" class="hidden">
                     </label>
                 </div>
             </div>
@@ -331,11 +331,35 @@
             setupButtons();
             setupModalButtons(); 
             setupNodeButton(); 
+            setupMobileClickFixes(); // Ініціалізація переадресації дотику для камери
             
             DOM.title.addEventListener('input', saveLocal);
             DOM.eq.addEventListener('input', saveLocal);
             
             renderNodes();
+        }
+
+        // Надійний фікс для кліків по фото в Sandbox iframe
+        function setupMobileClickFixes() {
+            const fixes = [
+                { labelId: 'main-photo-label', inputEl: DOM.mainImgInp },
+                { labelId: 'node-photo-label', inputEl: DOM.nodeImgInp },
+                { labelId: 'modal-photo-label', inputEl: DOM.modalPhotoInp },
+                { labelId: 'modal-video-label', inputEl: DOM.modalVideoInp }
+            ];
+            
+            fixes.forEach(fix => {
+                const label = document.getElementById(fix.labelId);
+                if (label && fix.inputEl) {
+                    label.addEventListener('click', (e) => {
+                        if (e.target !== fix.inputEl) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            fix.inputEl.click();
+                        }
+                    });
+                }
+            });
         }
 
         function showToast(msg, isError = false) {
@@ -471,80 +495,112 @@
             if (filerobotEditor) { filerobotEditor.terminate(); filerobotEditor = null; }
         };
 
-        // ================= ШІ ТА ГОЛОСОВИЙ ВВІД (СТАБІЛЬНИЙ - БЕЗ ЗАДВОЄННЯ СЛІВ) =================
+        // ================= ШІ ТА ГОЛОСОВИЙ ВВІД (ОНОВЛЕНИЙ - БЕЗ ЗАДВОЄННЯ СЛІВ) =================
         let isRec = false; 
         let sttTargetInput = null; 
         let sttTargetBtn = null;
         let sessionBaseText = '';
-        let finalSessionTranscript = ''; // Спеціальний буфер для збереження стабільної історії розпізнавання
-        const sr = window.SpeechRecognition || window.webkitSpeechRecognition ? new (window.SpeechRecognition || window.webkitSpeechRecognition)() : null;
-        if(sr) { sr.lang = 'uk-UA'; sr.continuous = true; sr.interimResults = true; }
+        let sr = null;
+
+        function getSpeechRecognition() {
+            if (sr) return sr;
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) return null;
+            
+            try {
+                sr = new SpeechRecognition();
+                sr.lang = 'uk-UA';
+                sr.continuous = true;
+                sr.interimResults = true;
+                
+                sr.onstart = () => { 
+                    isRec = true; 
+                    if(sttTargetBtn) { 
+                        sttTargetBtn.classList.add('bg-red-100', 'text-red-700', 'border-red-300'); 
+                        sttTargetBtn.innerHTML = '🔴...'; 
+                    }
+                    showToast("🎤 Запис розпочато. Говоріть...");
+                };
+                
+                sr.onresult = (e) => { 
+                    let interimTranscript = '';
+                    let finalTranscript = '';
+                    
+                    // Повний збір згенерованого тексту з поточного буфера результатів
+                    for (let i = 0; i < e.results.length; ++i) {
+                        if (e.results[i].isFinal) {
+                            finalTranscript += e.results[i][0].transcript;
+                        } else {
+                            interimTranscript += e.results[i][0].transcript;
+                        }
+                    }
+                    
+                    let currentText = (finalTranscript + interimTranscript).trim().replace(/\s+/g, ' ');
+                    if (sttTargetInput) {
+                        sttTargetInput.value = sessionBaseText ? (sessionBaseText + ' ' + currentText).trim() : currentText;
+                        sttTargetInput.dispatchEvent(new Event('input')); 
+                    }
+                };
+                
+                sr.onend = () => { 
+                    isRec = false; 
+                    resetSttButtonUI();
+                    showToast("🎤 Голосовий запис завершено");
+                };
+                
+                sr.onerror = (e) => { 
+                    console.error('Помилка мікрофона:', e.error);
+                    if (e.error === 'not-allowed') {
+                        showToast("Помилка: Надайте доступ до мікрофона в налаштуваннях браузера", true);
+                    } else {
+                        showToast("Помилка запису: " + e.error, true);
+                    }
+                    isRec = false;
+                    resetSttButtonUI();
+                };
+            } catch (err) {
+                console.error("Не вдалося створити SpeechRecognition:", err);
+            }
+            return sr;
+        }
+
+        function resetSttButtonUI() {
+            if (sttTargetBtn) {
+                sttTargetBtn.classList.remove('bg-red-100', 'text-red-700', 'border-red-300');
+                if (sttTargetBtn.id === 'modal-stt-btn') {
+                    sttTargetBtn.innerHTML = '🎙️ Голос';
+                } else {
+                    sttTargetBtn.innerHTML = '🎙️';
+                }
+            }
+        }
 
         window.toggleGlobalStt = (inputEl, btnEl) => {
-            if(!sr) return showToast("Голосовий ввід не підтримується браузером", true);
+            const recognizer = getSpeechRecognition();
+            if(!recognizer) return showToast("Голосовий ввід не підтримується браузером або вашим пристроєм", true);
+            
             if(isRec) {
-                sr.stop();
+                recognizer.stop();
                 if(sttTargetInput !== inputEl) {
                     setTimeout(() => { 
                         sttTargetInput = inputEl; 
                         sttTargetBtn = btnEl; 
-                        finalSessionTranscript = '';
                         sessionBaseText = inputEl.value.trim();
-                        sr.start(); 
-                    }, 300);
+                        recognizer.start(); 
+                    }, 400);
                 }
             } else {
                 sttTargetInput = inputEl; 
                 sttTargetBtn = btnEl; 
-                finalSessionTranscript = '';
                 sessionBaseText = inputEl.value.trim();
-                sr.start();
+                try {
+                    recognizer.start();
+                } catch(e) {
+                    console.error("Не вдалося запустити мікрофон:", e);
+                    showToast("Не вдалося увімкнути мікрофон. Спробуйте ще раз.", true);
+                }
             }
         };
-
-        if(sr) {
-            sr.onstart = () => { 
-                isRec = true; 
-                finalSessionTranscript = '';
-                if(sttTargetBtn) { sttTargetBtn.classList.add('text-red-600'); sttTargetBtn.classList.remove('text-slate-400'); }
-                showToast("🎤 Слухаю...");
-            };
-            sr.onresult = (e) => { 
-                let interimTranscript = '';
-                let newFinals = '';
-                
-                // Опрацьовуємо тільки нові результати розпізнавання
-                for (let i = e.resultIndex; i < e.results.length; ++i) {
-                    const transcript = e.results[i][0].transcript;
-                    if (e.results[i].isFinal) {
-                        newFinals += transcript;
-                    } else {
-                        interimTranscript += transcript;
-                    }
-                }
-                
-                if (newFinals) {
-                    finalSessionTranscript += newFinals;
-                }
-                
-                // Формуємо чистий потік слів для поточної сесії
-                let currentSessionText = (finalSessionTranscript + interimTranscript).trim().replace(/\s+/g, ' ');
-
-                if (sttTargetInput) {
-                    let combined = sessionBaseText;
-                    if (currentSessionText) {
-                        combined += (combined ? ' ' : '') + currentSessionText;
-                    }
-                    sttTargetInput.value = combined;
-                    sttTargetInput.dispatchEvent(new Event('input')); 
-                }
-            };
-            sr.onend = () => { 
-                isRec = false; 
-                if(sttTargetBtn) { sttTargetBtn.classList.remove('text-red-600'); sttTargetBtn.classList.add('text-slate-400'); }
-            };
-            sr.onerror = (e) => { console.error('Помилка мікрофона:', e); };
-        }
 
         window.runGlobalAi = async (inputEl, btnEl) => {
             const txt = inputEl.value.trim();
