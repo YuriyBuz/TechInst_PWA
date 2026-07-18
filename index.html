@@ -25,19 +25,16 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
-        /* СУВОРА ІЗОЛЯЦІЯ ДЛЯ ДРУКУ ТА PDF */
+        /* СТИЛІ ДЛЯ ЛОКАЛЬНОГО ДРУКУ (CTRL+P) */
         @media print {
-            body > * { display: none !important; }
-            body > #pdf-template { display: block !important; }
+            #main-ui, #footer-bar, #step-modal, #img-editor-modal, #toast { display: none !important; }
+            #pdf-template { display: block !important; }
             body { background: white !important; padding: 0 !important; margin: 0 !important; }
             @page { margin: 10mm; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
-        body.pdf-export-mode > * { display: none !important; }
-        body.pdf-export-mode > #pdf-template { display: block !important; }
-        body.pdf-export-mode { background: white !important; }
 
-        /* Властивості для заборони розривів всередині блоків (Кроків та Карток) */
+        /* Заборона розривів елементів у PDF */
         .avoid-page-break {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
@@ -51,7 +48,8 @@
 </head>
 <body class="font-sans antialiased">
 
-    <div class="container mx-auto max-w-2xl p-3 sm:p-6 relative">
+    <!-- Увесь інтерфейс загорнуто в main-ui, щоб безпечно ховати його під час генерації PDF -->
+    <div id="main-ui" class="container mx-auto max-w-2xl p-3 sm:p-6 relative">
         <header class="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
             <div class="w-1/3"><div id="current-date" class="text-xs font-bold text-slate-500 leading-tight"></div></div>
             <div class="w-1/3 flex justify-center">
@@ -165,9 +163,9 @@
                         <input type="email" id="set-email" class="input-field" placeholder="example@gmail.com">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">ID папки Google Drive (опціонально)</label>
-                        <input type="text" id="set-drive" class="input-field" placeholder="1A2b3C4d5E6f...">
-                        <p class="text-[10px] text-slate-500 mt-1">ID можна взяти з посилання на папку.</p>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Посилання або ID папки Google Drive (опціонально)</label>
+                        <input type="text" id="set-drive" class="input-field" placeholder="Можна вставити повне посилання...">
+                        <p class="text-[10px] text-slate-500 mt-1">Вставте посилання на папку Google Drive, куди складати PDF.</p>
                     </div>
                     
                     <div class="pt-4 border-t border-slate-100">
@@ -235,7 +233,7 @@
         <div id="image-editor-container" class="flex-1 w-full bg-slate-900"></div>
     </div>
 
-    <!-- ПРИХОВАНИЙ ШАБЛОН ДЛЯ PDF (Перероблено під дизайн UI) -->
+    <!-- ЦЕЙ БЛОК БУДЕ ЄДИНИМ ВИДИМИМ ПІД ЧАС ГЕНЕРАЦІЇ PDF -->
     <div id="pdf-template" class="hidden w-full max-w-4xl mx-auto p-8 bg-white text-slate-800 font-sans">
         
         <div class="flex justify-between items-center mb-4 border-b-2 border-slate-800 pb-4">
@@ -272,7 +270,7 @@
     <div id="toast" class="fixed top-5 right-5 left-5 sm:left-auto bg-slate-800 text-white py-3 px-6 rounded-xl shadow-2xl transform -translate-y-20 opacity-0 transition-all z-[110] font-bold text-center pointer-events-none"></div>
 
     <script>
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxkzDeQCwh__4qHm3-p7-4LV6oPqjYSppYG2Ce5ZyW1uNqV1Wlhn-hnySDJltTKSm9gsA/exec'; 
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw5hw0gW0IU-lwDN1Y7JlheI2dLMC72QlA72UPVigwE_oXCMnhOD9-EeZqR9ewerS8lBg/exec'; 
 
         let state = {
             docId: crypto.randomUUID(), title: '', equipment: '', mainImage: null,
@@ -675,7 +673,6 @@
             cont.innerHTML = '';
             
             state.nodes.forEach((node) => {
-                // Використовуємо інлайн-стилі, щоб html2pdf ідеально відрендерив дизайн карток з Frontend'у
                 let html = `
                 <div class="avoid-page-break" style="padding: 1.25rem; margin-bottom: 1.5rem; background-color: white; border-radius: 1rem; border: 1px solid #e2e8f0; border-left: 4px solid #6366f1; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
                     <div class="avoid-page-break" style="display: flex; gap: 1rem; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 1rem;">
@@ -711,10 +708,35 @@
                 margin: 10, 
                 filename: `${state.title || 'Doc'}.pdf`, 
                 image: { type: 'jpeg', quality: 0.95 }, 
-                pagebreak: { mode: ['css', 'legacy'] }, // Ключовий параметр для avoid-page-break
-                html2canvas: { scale: 1.5, useCORS: true, scrollY: 0 }, // Додано scrollY: 0 для надійності
+                pagebreak: { mode: ['css', 'legacy'] },
+                html2canvas: { scale: 1.5, useCORS: true, scrollY: 0 }, 
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
             };
+        }
+
+        // --- НОВИЙ, БЕЗПЕЧНИЙ МЕТОД ГЕНЕРАЦІЇ PDF БЕЗ "БІЛОГО АРКУША" ---
+        async function getPdfBase64() {
+            const mainUi = document.getElementById('main-ui');
+            const footer = document.getElementById('footer-bar');
+            const template = document.getElementById('pdf-template');
+            
+            // Замість CSS hacks ми явно перемикаємо видимість елементів
+            mainUi.classList.add('hidden');
+            if(footer) footer.classList.add('hidden');
+            template.classList.remove('hidden');
+            
+            window.scrollTo(0, 0); // Прокручуємо вгору, щоб html2canvas не зрізав сторінку
+            await new Promise(resolve => setTimeout(resolve, 800)); // Даємо браузеру час відмалювати всі зображення
+            
+            try {
+                // html2pdf більше не плутається з display: none
+                return await html2pdf().set(getPdfConfig()).from(template).output('datauristring');
+            } finally {
+                // ЗАВЖДИ повертаємо інтерфейс назад, навіть якщо була помилка
+                template.classList.add('hidden');
+                mainUi.classList.remove('hidden');
+                if(footer) footer.classList.remove('hidden');
+            }
         }
 
         function setupButtons() {
@@ -724,9 +746,21 @@
             // ЛОКАЛЬНИЙ ДРУК
             if(DOM.pdfBtn) DOM.pdfBtn.onclick = () => { 
                 saveLocal(); generatePDFHtml(); 
-                window.scrollTo(0, 0); // ФІКС ПУСТОГО PDF (Прокрутка вгору)
-                document.body.classList.add('pdf-export-mode'); 
-                setTimeout(() => { window.print(); document.body.classList.remove('pdf-export-mode'); }, 500); 
+                
+                const mainUi = document.getElementById('main-ui');
+                const footer = document.getElementById('footer-bar');
+                const template = document.getElementById('pdf-template');
+                
+                mainUi.classList.add('hidden');
+                if(footer) footer.classList.add('hidden');
+                template.classList.remove('hidden');
+                
+                setTimeout(() => { 
+                    window.print(); 
+                    template.classList.add('hidden');
+                    mainUi.classList.remove('hidden');
+                    if(footer) footer.classList.remove('hidden');
+                }, 500); 
             };
             
             // ВІДПРАВКА НА ПОШТУ
@@ -735,16 +769,12 @@
                 if(!state.title || !state.nodes.length) return showToast("Спочатку створіть інструкцію", true);
                 if(!state.settings.email) { showToast("Вкажіть Email в налаштуваннях!", true); return DOM.tabSet.click(); }
                 
-                DOM.emailBtn.innerHTML = `<span class="text-lg">⏳</span> Відправка...`; DOM.emailBtn.disabled = true;
+                DOM.emailBtn.innerHTML = `<span class="text-lg">⏳</span> Збірка PDF...`; DOM.emailBtn.disabled = true;
                 try {
-                    window.scrollTo(0, 0); // ФІКС ПУСТОГО PDF
                     generatePDFHtml(); 
-                    document.body.classList.add('pdf-export-mode');
-                    await new Promise(resolve => setTimeout(resolve, 500)); // Даємо браузеру час відмалювати PDF шаблон
+                    const pdfBase64 = await getPdfBase64(); // Безпечна генерація
                     
-                    const pdfBase64 = await html2pdf().set(getPdfConfig()).from(document.getElementById('pdf-template')).output('datauristring');
-                    document.body.classList.remove('pdf-export-mode');
-                    
+                    DOM.emailBtn.innerHTML = `<span class="text-lg">⏳</span> Відправка...`;
                     const response = await fetch(GOOGLE_SCRIPT_URL, { 
                         method: 'POST', 
                         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -754,7 +784,7 @@
                     const result = await response.json();
                     if(result.status === "success") showToast(result.message); else throw new Error(result.message);
                 } catch (e) { 
-                    showToast("Помилка відправки: " + e.message, true); document.body.classList.remove('pdf-export-mode'); 
+                    showToast("Помилка відправки: " + e.message, true); 
                 } finally { DOM.emailBtn.innerHTML = `<span class="text-lg">📧</span> На пошту`; DOM.emailBtn.disabled = false; }
             };
             
@@ -763,17 +793,12 @@
                 saveLocal();
                 if(!state.title || !state.nodes.length) return showToast("Спочатку створіть інструкцію (вузли)", true);
                 
-                DOM.saveBtn.innerHTML = `<span class="text-lg">⏳</span> Збереження...`; DOM.saveBtn.disabled = true;
+                DOM.saveBtn.innerHTML = `<span class="text-lg">⏳</span> Збірка PDF...`; DOM.saveBtn.disabled = true;
                 try {
-                    window.scrollTo(0, 0); // ФІКС ПУСТОГО PDF
                     generatePDFHtml(); 
-                    document.body.classList.add('pdf-export-mode');
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                    const pdfBase64 = await getPdfBase64(); // Безпечна генерація
                     
-                    // Генеруємо PDF, щоб відправити його на Google Диск
-                    const pdfBase64 = await html2pdf().set(getPdfConfig()).from(document.getElementById('pdf-template')).output('datauristring');
-                    document.body.classList.remove('pdf-export-mode');
-
+                    DOM.saveBtn.innerHTML = `<span class="text-lg">⏳</span> Збереження...`;
                     const response = await fetch(GOOGLE_SCRIPT_URL, { 
                         method: 'POST', 
                         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -784,7 +809,7 @@
                             equipment: state.equipment, 
                             date: new Date().toLocaleString('uk-UA'), 
                             driveId: state.settings.driveId,
-                            pdfBase64: pdfBase64, // Тепер PDF відправляється і сюди!
+                            pdfBase64: pdfBase64, 
                             nodes: state.nodes 
                         }) 
                     });
@@ -792,8 +817,7 @@
                     const result = await response.json();
                     if (result.status === "success") showToast(result.message); else throw new Error(result.message);
                 } catch(e) { 
-                    document.body.classList.remove('pdf-export-mode');
-                    showToast("Помилка збереження: " + e.message, true); 
+                    showToast("Помилка: " + e.message, true); 
                 } finally { 
                     DOM.saveBtn.innerHTML = `<span class="text-lg">☁️</span> Зберегти`; DOM.saveBtn.disabled = false; 
                 }
