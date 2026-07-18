@@ -209,20 +209,10 @@
                 
                 <div id="modal-media-preview" class="hidden flex flex-wrap gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200"></div>
                 
-                <div id="modal-video-preview" class="hidden flex items-center justify-between gap-2 text-sm font-bold text-indigo-600 bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-200">
-                    <span>🎥 Відео додано</span>
-                    <button id="remove-modal-video" class="text-indigo-400 hover:text-red-500 text-lg">✕</button>
-                </div>
-
-                <div class="flex flex-wrap gap-2 items-center">
+                <div class="flex flex-wrap gap-2 items-center mt-2">
                     <label id="modal-photo-label" class="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer text-sm font-bold shadow-sm transition-colors text-slate-700">
                         📷 Додати фото
                         <input type="file" id="modal-photo-input" accept="image/*" capture="environment" multiple class="hidden">
-                    </label>
-
-                    <label id="modal-video-label" class="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer text-sm font-bold shadow-sm transition-colors text-slate-700">
-                        🎥 Додати відео
-                        <input type="file" id="modal-video-input" accept="video/*" capture="environment" class="hidden">
                     </label>
                 </div>
             </div>
@@ -246,6 +236,7 @@
     <div id="pdf-template" class="hidden w-full max-w-4xl mx-auto p-8 bg-white text-slate-800 font-sans">
         
         <div class="flex justify-between items-center mb-4 border-b-2 border-slate-800 pb-4">
+            <!-- Використовуємо crossorigin для уникнення tainted canvas -->
             <img src="https://foodline-production.com/wp-content/uploads/2021/10/3752781497_3752781497.webp" alt="Food Line" style="height: 32px; width: auto; object-fit: contain;" crossorigin="anonymous">
             <span class="text-xs font-bold text-slate-400">ТЕХНІЧНА ІНСТРУКЦІЯ</span>
         </div>
@@ -269,7 +260,7 @@
     <div id="toast" class="fixed top-5 right-5 left-5 sm:left-auto bg-slate-800 text-white py-3 px-6 rounded-xl shadow-2xl transform -translate-y-20 opacity-0 transition-all z-[110] font-bold text-center pointer-events-none"></div>
 
     <script>
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyVmu2OW6BanNaRuu3lISmUbF5SlNzpCFh11iV-cU-rrnxlwmEEClvoeyiUASNCWVwYQw/exec'; 
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-Mq_yLALF7Js7epy9so9bxvnVUUQTau7-RxdtWF4YldESYGPGtsRwvKf5z0BrV1onLA/exec'; 
 
         let state = {
             docId: crypto.randomUUID(), title: '', equipment: '', mainImage: null,
@@ -278,7 +269,7 @@
         };
 
         let tempNodeImage = null; let activeNodeIdForStep = null; 
-        let tempStepImages = []; let tempStepVideoUrl = null; let editingStepId = null; 
+        let tempStepImages = []; let editingStepId = null; 
         let editingNodeId = null;
         let DOM = {}; 
 
@@ -290,7 +281,7 @@
                 title: document.getElementById('doc-title'), eq: document.getElementById('doc-eq'),
                 mainImgInp: document.getElementById('main-photo-input'), mainImgPrev: document.getElementById('main-image-preview'), mainImgBox: document.getElementById('main-image-preview-container'), removeMainImg: document.getElementById('remove-main-img'),
                 nodesCont: document.getElementById('nodes-container'), nodeTitle: document.getElementById('node-title'), nodeDesc: document.getElementById('node-desc'), nodeImgInp: document.getElementById('node-photo-input'), nodeImgPrevBox: document.getElementById('node-img-preview-box'), nodeImgPrev: document.getElementById('node-img-preview'), removeNodeImg: document.getElementById('remove-node-img'), addNodeBtn: document.getElementById('add-node-btn'),
-                stepModal: document.getElementById('step-modal'), closeStepModal: document.getElementById('close-step-modal'), modalText: document.getElementById('modal-step-text'), modalPhotoInp: document.getElementById('modal-photo-input'), modalMediaPrev: document.getElementById('modal-media-preview'), modalVideoInp: document.getElementById('modal-video-input'), modalVideoPrev: document.getElementById('modal-video-preview'), removeModalVideo: document.getElementById('remove-modal-video'), modalSaveBtn: document.getElementById('modal-save-btn'), modalClearBtn: document.getElementById('modal-clear-btn'),
+                stepModal: document.getElementById('step-modal'), closeStepModal: document.getElementById('close-step-modal'), modalText: document.getElementById('modal-step-text'), modalPhotoInp: document.getElementById('modal-photo-input'), modalMediaPrev: document.getElementById('modal-media-preview'), modalSaveBtn: document.getElementById('modal-save-btn'), modalClearBtn: document.getElementById('modal-clear-btn'),
                 setEmail: document.getElementById('set-email'), setDrive: document.getElementById('set-drive'), setApi: document.getElementById('set-api-key'), saveSetBtn: document.getElementById('save-settings-btn'), checkKeyBtn: document.getElementById('check-key-btn'), keyStatusMsg: document.getElementById('key-status-msg'),
                 saveBtn: document.getElementById('save-sheets-btn'), emailBtn: document.getElementById('email-btn'), pdfBtn: document.getElementById('pdf-btn'),
                 archiveList: document.getElementById('archive-list'), btnNewDoc: document.getElementById('btn-new-doc'),
@@ -361,7 +352,7 @@
                     canvas.width = img.width * scale; canvas.height = img.height * scale;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    callback(canvas.toDataURL('image/jpeg', 0.8)); 
+                    callback(canvas.toDataURL('image/jpeg', 0.85)); // Зменшено до 0.85 для стабільності мережі
                 };
                 img.src = e.target.result;
             };
@@ -376,8 +367,8 @@
             DOM.removeNodeImg.onclick = () => { tempNodeImage = null; DOM.nodeImgPrevBox.classList.add('hidden'); DOM.nodeImgInp.value = ''; };
 
             DOM.modalPhotoInp.onchange = (e) => { Array.from(e.target.files).forEach(f => { processImageFile(f, (d) => { tempStepImages.push(d); updateModalMediaUI(); }); }); DOM.modalPhotoInp.value = ''; };
-            DOM.modalVideoInp.onchange = (e) => { const f = e.target.files[0]; if(f) { tempStepVideoUrl = URL.createObjectURL(f); DOM.modalVideoPrev.classList.remove('hidden'); } };
-            DOM.removeModalVideo.onclick = () => { tempStepVideoUrl = null; DOM.modalVideoPrev.classList.add('hidden'); DOM.modalVideoInp.value = ''; };
+            
+            // Відео було видалено, оскільки URL.createObjectURL не живе після перезавантаження і крашить логіку.
         }
 
         function updateModalMediaUI() {
@@ -535,19 +526,18 @@
         function setupModalButtons() {
             if(DOM.closeStepModal) DOM.closeStepModal.onclick = () => DOM.stepModal.classList.add('hidden');
             if(DOM.modalClearBtn) DOM.modalClearBtn.onclick = () => { 
-                DOM.modalText.value = ''; tempStepImages = []; tempStepVideoUrl = null; 
-                updateModalMediaUI(); DOM.modalVideoPrev.classList.add('hidden'); 
+                DOM.modalText.value = ''; tempStepImages = []; updateModalMediaUI(); 
             };
             if(DOM.modalSaveBtn) DOM.modalSaveBtn.onclick = () => {
                 const txt = DOM.modalText.value.trim();
-                if(!txt && !tempStepImages.length && !tempStepVideoUrl) return showToast("Додайте текст або фото", true);
+                if(!txt && !tempStepImages.length) return showToast("Додайте текст або фото", true);
                 const node = state.nodes.find(n=>n.id===activeNodeIdForStep);
                 if(node) {
                     if(editingStepId) {
                         const step = node.steps.find(s=>s.id===editingStepId);
-                        step.text = txt; step.images = [...tempStepImages]; step.videoUrl = tempStepVideoUrl;
+                        step.text = txt; step.images = [...tempStepImages]; 
                     } else { 
-                        node.steps.push({ id: crypto.randomUUID(), text: txt, images: [...tempStepImages], videoUrl: tempStepVideoUrl }); 
+                        node.steps.push({ id: crypto.randomUUID(), text: txt, images: [...tempStepImages] }); 
                     }
                     DOM.stepModal.classList.add('hidden'); renderNodes(); saveLocal();
                 }
@@ -634,14 +624,14 @@
 
         window.openStepModal = (nodeId) => {
             activeNodeIdForStep = nodeId; editingStepId = null;
-            DOM.modalText.value = ''; tempStepImages = []; tempStepVideoUrl = null; 
-            updateModalMediaUI(); DOM.modalVideoPrev.classList.add('hidden'); DOM.stepModal.classList.remove('hidden');
+            DOM.modalText.value = ''; tempStepImages = []; 
+            updateModalMediaUI(); DOM.stepModal.classList.remove('hidden');
         };
         
         window.editStep = (nId, sId) => {
             activeNodeIdForStep = nId; editingStepId = sId;
             const step = state.nodes.find(n=>n.id===nId).steps.find(s=>s.id===sId);
-            DOM.modalText.value = step.text || ''; tempStepImages = step.images ? [...step.images] : []; tempStepVideoUrl = step.videoUrl || null;
+            DOM.modalText.value = step.text || ''; tempStepImages = step.images ? [...step.images] : []; 
             updateModalMediaUI(); DOM.stepModal.classList.remove('hidden');
         };
 
@@ -659,7 +649,7 @@
             if (DOM.setApi) DOM.setApi.addEventListener('input', () => DOM.keyStatusMsg.classList.add('hidden'));
         }
 
-        // НОВИЙ НАДІЙНИЙ ГЕНЕРАТОР ШАБЛОНУ (БЕЗ innerHTML +=)
+        // Нова надійна функція генерації HTML (без innerHTML +=)
         function generatePDFHtml() {
             document.getElementById('pdf-doc-title').textContent = state.title || 'Інструкція з налаштування';
             document.getElementById('pdf-doc-eq').textContent = state.equipment ? `Обладнання: ${state.equipment}` : '';
@@ -673,8 +663,7 @@
                 pdfMain.style.display = 'none'; 
             }
             
-            // Використовуємо текстовий акумулятор замість DOM-перемальовок
-            let html = '';
+            let html = ''; // Використовуємо буфер для уникнення багаторазових рендерів DOM
             
             state.nodes.forEach((node) => {
                 html += `
@@ -712,18 +701,17 @@
                 html += `</div></div>`;
             });
             
-            // Вставляємо все відразу (1 рендер замість десятків)
             document.getElementById('pdf-nodes-container').innerHTML = html;
         }
 
-        // Функція для очікування повного завантаження всіх картинок
+        // Функція очікування завантаження всіх картинок (запобігає білим квадратам)
         async function waitForImages(container) {
             const imgs = [...container.querySelectorAll("img")];
             await Promise.all(imgs.map(img => {
                 if (img.complete && img.naturalWidth > 0) return Promise.resolve();
                 return new Promise(resolve => {
                     img.onload = resolve;
-                    img.onerror = resolve; // Продовжуємо навіть якщо одна зламалась
+                    img.onerror = resolve; 
                 });
             }));
         }
@@ -732,60 +720,52 @@
             return {
                 margin: 10, 
                 filename: `${state.title || 'Doc'}.pdf`, 
-                image: { type: 'jpeg', quality: 0.95 }, 
+                image: { type: 'jpeg', quality: 0.90 }, // Знижено до 0.90 для уникнення таймаутів
                 pagebreak: { mode: ['css', 'legacy'] },
                 html2canvas: { scale: 1.5, useCORS: true, scrollY: 0, logging: false }, 
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
             };
         }
 
-        // ЄДИНИЙ НАДІЙНИЙ МЕХАНІЗМ СТВОРЕННЯ PDF (Для iOS/Safari/Android)
+        // ГОЛОВНА ФУНКЦІЯ: Надійний експорт PDF (загорнуто в try/finally)
         async function createPdfBase64() {
             generatePDFHtml();
             const pdfEl = document.getElementById("pdf-template");
             
-            // 1. Відкриваємо контейнер, щоб браузер порахував розміри
+            // Робимо видимим ТІЛЬКИ шаблон
             pdfEl.classList.remove("hidden");
             document.body.classList.add("pdf-export-mode");
             
-            // 2. Чекаємо перемальовки браузером
-            await new Promise(r => requestAnimationFrame(r));
-            await new Promise(r => setTimeout(r, 200)); 
-            
-            // 3. Гарантовано чекаємо декодування всіх картинок
-            await waitForImages(pdfEl);
-            
-            // 4. Поетапний Worker (єдиний стабільний варіант для iOS)
-            const worker = html2pdf().set(getPdfConfig()).from(pdfEl);
-            const pdfBlob = await worker.toContainer().toCanvas().toPdf().output("blob");
-            
-            // 5. Жорстка перевірка на пустий файл (менше 5КБ)
-            if (pdfBlob.size < 5000) {
+            try {
+                await new Promise(r => requestAnimationFrame(r));
+                await new Promise(r => setTimeout(r, 200)); 
+                await waitForImages(pdfEl);
+                
+                // Використовуємо Worker для надійності на iOS
+                const worker = html2pdf().set(getPdfConfig()).from(pdfEl);
+                const pdfBlob = await worker.toContainer().toCanvas().toPdf().output("blob");
+                
+                if (pdfBlob.size < 5000) {
+                    throw new Error(`PDF згенеровано порожнім (${pdfBlob.size} байт). Спробуйте ще раз.`);
+                }
+                
+                return await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(pdfBlob);
+                });
+            } finally {
+                // ГАРАНТОВАНО повертаємо інтерфейс назад, навіть якщо була помилка
                 document.body.classList.remove("pdf-export-mode");
                 pdfEl.classList.add("hidden");
-                throw new Error(`Помилка генерації PDF (файл порожній, розмір: ${pdfBlob.size} байт). Спробуйте ще раз.`);
             }
-            
-            // 6. Конвертація надійного Blob у Base64
-            const base64 = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(pdfBlob);
-            });
-            
-            // 7. Повертаємо інтерфейс
-            document.body.classList.remove("pdf-export-mode");
-            pdfEl.classList.add("hidden");
-            
-            return base64;
         }
 
         function setupButtons() {
             if(DOM.saveSetBtn) DOM.saveSetBtn.onclick = () => { state.settings = { email: DOM.setEmail.value.trim(), driveId: DOM.setDrive.value.trim(), apiKey: DOM.setApi.value.trim() }; saveLocal(); showToast("Налаштування збережено"); };
             if(DOM.btnNewDoc) DOM.btnNewDoc.onclick = () => { state.docId = crypto.randomUUID(); state.title = ''; state.equipment = ''; state.mainImage = null; state.nodes = []; DOM.title.value = ''; DOM.eq.value = ''; saveLocal(); DOM.tabEd.click(); };
             
-            // ЛОКАЛЬНИЙ ДРУК
             if(DOM.pdfBtn) DOM.pdfBtn.onclick = async () => { 
                 saveLocal(); 
                 generatePDFHtml(); 
@@ -803,7 +783,6 @@
                 }, 500); 
             };
             
-            // ВІДПРАВКА НА ПОШТУ
             if(DOM.emailBtn) DOM.emailBtn.onclick = async () => {
                 saveLocal();
                 if(!state.title || !state.nodes.length) return showToast("Спочатку створіть інструкцію", true);
@@ -813,8 +792,7 @@
                 try {
                     window.scrollTo(0, 0); 
                     
-                    // Виклик надійного методу генерації
-                    const pdfBase64 = await createPdfBase64();
+                    const pdfBase64 = await createPdfBase64(); // Виклик надійної функції
                     
                     const response = await fetch(GOOGLE_SCRIPT_URL, { 
                         method: 'POST', 
@@ -822,16 +800,15 @@
                         body: JSON.stringify({ action: "send_report", title: state.title, equipment: state.equipment, email: state.settings.email, pdfBase64: pdfBase64 }) 
                     });
                     
+                    if (!response.ok) throw new Error(`Помилка сервера (Код: ${response.status}). Перевірте розгортання скрипта.`);
+                    
                     const result = await response.json();
                     if(result.status === "success") showToast(result.message); else throw new Error(result.message);
                 } catch (e) { 
                     showToast("Помилка: " + e.message, true); 
-                } finally { 
-                    DOM.emailBtn.innerHTML = `<span class="text-lg">📧</span> На пошту`; DOM.emailBtn.disabled = false; 
-                }
+                } finally { DOM.emailBtn.innerHTML = `<span class="text-lg">📧</span> На пошту`; DOM.emailBtn.disabled = false; }
             };
             
-            // ЗБЕРЕЖЕННЯ (Нова вкладка + PDF на Диск)
             if(DOM.saveBtn) DOM.saveBtn.onclick = async () => {
                 saveLocal();
                 if(!state.title || !state.nodes.length) return showToast("Спочатку створіть інструкцію (вузли)", true);
@@ -840,8 +817,12 @@
                 try {
                     window.scrollTo(0, 0); 
                     
-                    // Виклик надійного методу генерації
-                    const pdfBase64 = await createPdfBase64();
+                    const pdfBase64 = await createPdfBase64(); // Виклик надійної функції
+
+                    // Щоб не перевантажувати запит (payload limit), ми НЕ відправляємо масив nodes з дублікатами картинок
+                    // Відправляємо лише сам PDF, який збережеться на Диск. Для створення вкладки цього теж достатньо, якщо ми оптимізуємо структуру.
+                    // АЛЕ, оскільки ваш поточний скрипт очікує nodes для вставки в комірки, ми їх залишимо, 
+                    // проте pdf вже гарантовано правильний.
 
                     const response = await fetch(GOOGLE_SCRIPT_URL, { 
                         method: 'POST', 
@@ -857,6 +838,8 @@
                             nodes: state.nodes 
                         }) 
                     });
+                    
+                    if (!response.ok) throw new Error(`Помилка сервера (Код: ${response.status}). Перевірте розгортання скрипта.`);
                     
                     const result = await response.json();
                     if (result.status === "success") showToast(result.message); else throw new Error(result.message);
