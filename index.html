@@ -44,6 +44,13 @@
             display: block !important;
         }
         .page-break { page-break-before: always; }
+
+        /* Оверлей під час генерації PDF */
+        #gen-overlay { display: none; }
+        #gen-overlay.show { display: flex; }
+        @media print { #gen-overlay { display: none !important; } }
+        .spin { animation: spinAnim 0.9s linear infinite; }
+        @keyframes spinAnim { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="font-sans antialiased">
@@ -54,7 +61,7 @@
             <header class="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
                 <div class="w-1/3"><div id="current-date" class="text-xs font-bold text-slate-500 leading-tight"></div></div>
                 <div class="w-1/3 flex justify-center">
-                    <img src="https://foodline-production.com/wp-content/uploads/2021/10/3752781497_3752781497.webp" alt="Food Line" class="h-10 w-auto rounded-lg bg-white p-1 shadow-sm" onerror="this.src='https://placehold.co/100x40?text=Food+Line';">
+                    <img id="app-logo" src="https://foodline-production.com/wp-content/uploads/2021/10/3752781497_3752781497.webp" alt="Food Line" class="h-10 w-auto rounded-lg bg-white p-1 shadow-sm" onerror="this.onerror=null;this.src='https://placehold.co/100x40?text=Food+Line';">
                 </div>
                 <div class="w-1/3 flex justify-end">
                     <div class="text-xs font-semibold px-3 py-1.5 rounded-full border bg-white flex items-center gap-2 shadow-sm">
@@ -166,6 +173,27 @@
                             <input type="text" id="set-drive" class="input-field" placeholder="1A2b3C4d5E6f...">
                             <p class="text-[10px] text-slate-500 mt-1">Можна вставити повне посилання, система знайде ID.</p>
                         </div>
+
+                        <div class="pt-4 border-t border-slate-100">
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Логотип компанії (для PDF та шапки)</label>
+                            <div class="flex items-center gap-3 flex-wrap">
+                                <div id="set-logo-preview-box" class="hidden relative">
+                                    <img id="set-logo-preview" src="" class="h-12 rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
+                                    <button id="remove-logo-btn" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow hover:bg-red-600">✕</button>
+                                </div>
+                                <label class="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer text-sm font-bold shadow-sm transition-colors text-slate-700">
+                                    🖼️ Завантажити логотип
+                                    <input type="file" id="set-logo-input" accept="image/*" class="hidden">
+                                </label>
+                            </div>
+                            <p class="text-[10px] text-slate-500 mt-1">Завантажте лого один раз — воно збережеться на пристрої і гарантовано потрапить у PDF. Без нього в PDF буде текстовий напис "FOOD LINE".</p>
+                        </div>
+
+                        <div class="pt-4 border-t border-slate-100">
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Зв'язок із сервером (Google Apps Script)</label>
+                            <button id="test-conn-btn" class="w-full bg-slate-700 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-colors">📡 Перевірити з'єднання зі скриптом</button>
+                            <div id="conn-status-msg" class="mt-2 text-xs font-bold hidden whitespace-pre-wrap"></div>
+                        </div>
                         
                         <div class="pt-4 border-t border-slate-100">
                             <label class="block text-xs font-bold text-purple-700 mb-1">ШІ Ключ (Gemini API)</label>
@@ -209,10 +237,20 @@
                 
                 <div id="modal-media-preview" class="hidden flex flex-wrap gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200"></div>
                 
-                <div class="flex flex-wrap gap-2 items-center mt-2">
+                <div id="modal-video-preview" class="hidden flex items-center justify-between gap-2 text-sm font-bold text-indigo-600 bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-200">
+                    <span>🎥 Відео додано</span>
+                    <button id="remove-modal-video" class="text-indigo-400 hover:text-red-500 text-lg">✕</button>
+                </div>
+
+                <div class="flex flex-wrap gap-2 items-center">
                     <label id="modal-photo-label" class="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer text-sm font-bold shadow-sm transition-colors text-slate-700">
                         📷 Додати фото
                         <input type="file" id="modal-photo-input" accept="image/*" capture="environment" multiple class="hidden">
+                    </label>
+
+                    <label id="modal-video-label" class="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer text-sm font-bold shadow-sm transition-colors text-slate-700">
+                        🎥 Додати відео
+                        <input type="file" id="modal-video-input" accept="video/*" capture="environment" class="hidden">
                     </label>
                 </div>
             </div>
@@ -236,8 +274,7 @@
     <div id="pdf-template" class="hidden w-full max-w-4xl mx-auto p-8 bg-white text-slate-800 font-sans">
         
         <div class="flex justify-between items-center mb-4 border-b-2 border-slate-800 pb-4">
-            <!-- Використовуємо crossorigin для уникнення tainted canvas -->
-            <img src="https://foodline-production.com/wp-content/uploads/2021/10/3752781497_3752781497.webp" alt="Food Line" style="height: 32px; width: auto; object-fit: contain;" crossorigin="anonymous">
+            <img id="pdf-logo" src="" alt="Food Line" style="height: 32px; width: auto; object-fit: contain;">
             <span class="text-xs font-bold text-slate-400">ТЕХНІЧНА ІНСТРУКЦІЯ</span>
         </div>
         
@@ -257,21 +294,72 @@
         </div>
     </div>
 
+    <div id="gen-overlay" class="fixed inset-0 bg-white/95 z-[150] flex-col items-center justify-center gap-4 text-center p-6">
+        <div class="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full spin"></div>
+        <div id="gen-overlay-text" class="font-bold text-slate-700 text-lg">Генерується PDF...</div>
+        <div class="text-xs text-slate-400">Це може тривати до хвилини на великих інструкціях.<br>Не закривайте сторінку.</div>
+    </div>
+
     <div id="toast" class="fixed top-5 right-5 left-5 sm:left-auto bg-slate-800 text-white py-3 px-6 rounded-xl shadow-2xl transform -translate-y-20 opacity-0 transition-all z-[110] font-bold text-center pointer-events-none"></div>
 
     <script>
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-Mq_yLALF7Js7epy9so9bxvnVUUQTau7-RxdtWF4YldESYGPGtsRwvKf5z0BrV1onLA/exec'; 
+        // ============================================================
+        //  НАЛАШТУВАННЯ ЗВ'ЯЗКУ
+        //  Після КОЖНОЇ зміни Code.gs: Розгорнути -> Керувати
+        //  розгортаннями -> Редагувати -> Версія: НОВА -> Розгорнути.
+        //  Доступ має бути: "Будь-хто" (Anyone), Виконувати як: "Я".
+        // ============================================================
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-Mq_yLALF7Js7epy9so9bxvnVUUQTau7-RxdtWF4YldESYGPGtsRwvKf5z0BrV1onLA/exec';
+        const FETCH_TIMEOUT_MS = 180000; // 3 хвилини на великі PDF
+        const REMOTE_LOGO_URL = 'https://foodline-production.com/wp-content/uploads/2021/10/3752781497_3752781497.webp';
+
+        // Вбудований запасний логотип (SVG -> base64, ніякого CORS, працює завжди)
+        const DEFAULT_LOGO = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="220" height="48" viewBox="0 0 220 48">' +
+            '<rect width="220" height="48" rx="10" fill="#059669"/>' +
+            '<text x="110" y="31" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#ffffff" text-anchor="middle">FOOD LINE</text>' +
+            '</svg>'
+        );
+
+        // Лого, автоматично стягнуте з сайту (якщо сайт дозволить CORS)
+        let runtimeLogo = null;
+
+        // Актуальний логотип: свій завантажений -> з сайту -> вбудований напис
+        function getActiveLogo() {
+            return state.settings.logo || runtimeLogo || DEFAULT_LOGO;
+        }
+
+        // Спроба перетворити лого з сайту на base64 (вдасться лише якщо сайт віддає CORS)
+        function tryLoadRemoteLogo() {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                const finish = (val) => { clearTimeout(timer); resolve(val); };
+                const timer = setTimeout(() => finish(null), 6000);
+                img.onload = () => {
+                    try {
+                        const c = document.createElement('canvas');
+                        c.width = img.naturalWidth; c.height = img.naturalHeight;
+                        c.getContext('2d').drawImage(img, 0, 0);
+                        finish(c.toDataURL('image/png'));
+                    } catch (e) { finish(null); }
+                };
+                img.onerror = () => finish(null);
+                // cache-bust: щоб браузер не підсунув закешовану версію без CORS-заголовків
+                img.src = REMOTE_LOGO_URL + '?cors=' + Date.now();
+            });
+        }
 
         let state = {
             docId: crypto.randomUUID(), title: '', equipment: '', mainImage: null,
             nodes: [], archive: [],
-            settings: { email: 'Buznitskiy7@gmail.com', driveId: '', apiKey: '' }
+            settings: { email: 'Buznitskiy7@gmail.com', driveId: '', apiKey: '', logo: null }
         };
 
-        let tempNodeImage = null; let activeNodeIdForStep = null; 
-        let tempStepImages = []; let editingStepId = null; 
+        let tempNodeImage = null; let activeNodeIdForStep = null;
+        let tempStepImages = []; let tempStepVideoUrl = null; let editingStepId = null;
         let editingNodeId = null;
-        let DOM = {}; 
+        let DOM = {};
 
         function initDOM() {
             DOM = {
@@ -281,8 +369,12 @@
                 title: document.getElementById('doc-title'), eq: document.getElementById('doc-eq'),
                 mainImgInp: document.getElementById('main-photo-input'), mainImgPrev: document.getElementById('main-image-preview'), mainImgBox: document.getElementById('main-image-preview-container'), removeMainImg: document.getElementById('remove-main-img'),
                 nodesCont: document.getElementById('nodes-container'), nodeTitle: document.getElementById('node-title'), nodeDesc: document.getElementById('node-desc'), nodeImgInp: document.getElementById('node-photo-input'), nodeImgPrevBox: document.getElementById('node-img-preview-box'), nodeImgPrev: document.getElementById('node-img-preview'), removeNodeImg: document.getElementById('remove-node-img'), addNodeBtn: document.getElementById('add-node-btn'),
-                stepModal: document.getElementById('step-modal'), closeStepModal: document.getElementById('close-step-modal'), modalText: document.getElementById('modal-step-text'), modalPhotoInp: document.getElementById('modal-photo-input'), modalMediaPrev: document.getElementById('modal-media-preview'), modalSaveBtn: document.getElementById('modal-save-btn'), modalClearBtn: document.getElementById('modal-clear-btn'),
+                stepModal: document.getElementById('step-modal'), closeStepModal: document.getElementById('close-step-modal'), modalText: document.getElementById('modal-step-text'), modalPhotoInp: document.getElementById('modal-photo-input'), modalMediaPrev: document.getElementById('modal-media-preview'), modalVideoInp: document.getElementById('modal-video-input'), modalVideoPrev: document.getElementById('modal-video-preview'), removeModalVideo: document.getElementById('remove-modal-video'), modalSaveBtn: document.getElementById('modal-save-btn'), modalClearBtn: document.getElementById('modal-clear-btn'),
                 setEmail: document.getElementById('set-email'), setDrive: document.getElementById('set-drive'), setApi: document.getElementById('set-api-key'), saveSetBtn: document.getElementById('save-settings-btn'), checkKeyBtn: document.getElementById('check-key-btn'), keyStatusMsg: document.getElementById('key-status-msg'),
+                testConnBtn: document.getElementById('test-conn-btn'), connStatusMsg: document.getElementById('conn-status-msg'),
+                setLogoInp: document.getElementById('set-logo-input'), setLogoPrev: document.getElementById('set-logo-preview'), setLogoPrevBox: document.getElementById('set-logo-preview-box'), removeLogoBtn: document.getElementById('remove-logo-btn'),
+                genOverlay: document.getElementById('gen-overlay'), genOverlayText: document.getElementById('gen-overlay-text'),
+                appLogo: document.getElementById('app-logo'),
                 saveBtn: document.getElementById('save-sheets-btn'), emailBtn: document.getElementById('email-btn'), pdfBtn: document.getElementById('pdf-btn'),
                 archiveList: document.getElementById('archive-list'), btnNewDoc: document.getElementById('btn-new-doc'),
                 imgEditorModal: document.getElementById('img-editor-modal')
@@ -290,27 +382,46 @@
         }
 
         function initApp() {
-            initDOM();
-            DOM.date.textContent = new Date().toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' }); 
-            loadData();
-            setupTabs();
-            setupMediaInputs();
-            setupSettings();
-            setupButtons();
-            setupModalButtons(); 
-            setupNodeButton(); 
-            
-            DOM.title.addEventListener('input', saveLocal);
-            DOM.eq.addEventListener('input', saveLocal);
-            
-            renderNodes();
+            try {
+                initDOM();
+                DOM.date.textContent = new Date().toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' });
+                loadData();
+                setupTabs();
+                setupMediaInputs();
+                setupSettings();
+                setupButtons();
+                setupModalButtons();
+                setupNodeButton();
+
+                DOM.title.addEventListener('input', saveLocal);
+                DOM.eq.addEventListener('input', saveLocal);
+
+                renderNodes();
+
+                // Логотип: якщо є свій — ставимо в шапку одразу;
+                // паралельно тихо пробуємо стягнути лого з сайту для PDF
+                if (state.settings.logo) {
+                    DOM.appLogo.src = state.settings.logo;
+                }
+                tryLoadRemoteLogo().then(dataUrl => {
+                    if (dataUrl) {
+                        runtimeLogo = dataUrl;
+                        if (!state.settings.logo) DOM.appLogo.src = dataUrl;
+                    }
+                });
+            } catch (err) {
+                // Якщо ініціалізація впала — кнопки "мовчатимуть". Показуємо причину явно.
+                console.error("INIT ERROR:", err);
+                alert("Помилка запуску додатку: " + err.message + "\nПерезавантажте сторінку. Якщо повторюється — надішліть цей текст розробнику.");
+            }
         }
 
-        function showToast(msg, isError = false) {
+        function showToast(msg, isError = false, durationMs = 3500) {
             DOM.toast.textContent = msg;
-            DOM.toast.className = `fixed top-5 right-5 left-5 sm:left-auto bg-${isError?'red-500':'emerald-600'} text-white py-3 px-6 rounded-xl shadow-2xl transition-all z-[110] font-bold text-center pointer-events-none`;
+            DOM.toast.className = `fixed top-5 right-5 left-5 sm:left-auto ${isError ? 'bg-red-500' : 'bg-emerald-600'} text-white py-3 px-6 rounded-xl shadow-2xl transition-all z-[110] font-bold text-center pointer-events-none`;
             DOM.toast.style.opacity = '1'; DOM.toast.style.transform = 'translateY(0)';
-            setTimeout(() => { DOM.toast.style.opacity = '0'; DOM.toast.style.transform = 'translateY(-2rem)'; }, 3000);
+            clearTimeout(showToast._t);
+            showToast._t = setTimeout(() => { DOM.toast.style.opacity = '0'; DOM.toast.style.transform = 'translateY(-2rem)'; }, durationMs);
         }
 
         function setupTabs() {
@@ -325,15 +436,18 @@
 
             DOM.tabEd.onclick = () => { hideAll(); DOM.viewEd.classList.remove('hidden'); DOM.tabEd.className = actCls; document.getElementById('footer-bar').classList.remove('translate-y-[150%]'); renderNodes(); };
             DOM.tabAr.onclick = () => { hideAll(); DOM.viewAr.classList.remove('hidden'); DOM.tabAr.className = actCls; renderArchive(); };
-            
+
             DOM.tabSet.onclick = () => {
                 const pass = prompt("Введіть пароль доступу до налаштувань:");
                 if (pass === "5588") {
                     hideAll(); DOM.viewSet.classList.remove('hidden'); DOM.tabSet.className = actCls;
-                    DOM.setEmail.value = state.settings.email || ''; 
-                    DOM.setDrive.value = state.settings.driveId || ''; 
+                    DOM.setEmail.value = state.settings.email || '';
+                    DOM.setDrive.value = state.settings.driveId || '';
                     DOM.setApi.value = state.settings.apiKey || '';
                     DOM.keyStatusMsg.classList.add('hidden');
+                    DOM.connStatusMsg.classList.add('hidden');
+                    if (state.settings.logo) { DOM.setLogoPrev.src = state.settings.logo; DOM.setLogoPrevBox.classList.remove('hidden'); }
+                    else { DOM.setLogoPrevBox.classList.add('hidden'); }
                 } else {
                     if (pass !== null) showToast("Невірний пароль!", true);
                 }
@@ -347,12 +461,12 @@
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const MAX = 1000; 
+                    const MAX = 1000;
                     const scale = Math.min(MAX / img.width, MAX / img.height, 1);
                     canvas.width = img.width * scale; canvas.height = img.height * scale;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    callback(canvas.toDataURL('image/jpeg', 0.85)); // Зменшено до 0.85 для стабільності мережі
+                    callback(canvas.toDataURL('image/jpeg', 0.8));
                 };
                 img.src = e.target.result;
             };
@@ -367,8 +481,8 @@
             DOM.removeNodeImg.onclick = () => { tempNodeImage = null; DOM.nodeImgPrevBox.classList.add('hidden'); DOM.nodeImgInp.value = ''; };
 
             DOM.modalPhotoInp.onchange = (e) => { Array.from(e.target.files).forEach(f => { processImageFile(f, (d) => { tempStepImages.push(d); updateModalMediaUI(); }); }); DOM.modalPhotoInp.value = ''; };
-            
-            // Відео було видалено, оскільки URL.createObjectURL не живе після перезавантаження і крашить логіку.
+            DOM.modalVideoInp.onchange = (e) => { const f = e.target.files[0]; if(f) { tempStepVideoUrl = URL.createObjectURL(f); DOM.modalVideoPrev.classList.remove('hidden'); showToast("Увага: відео зберігається лише на цьому пристрої до перезавантаження", false, 5000); } };
+            DOM.removeModalVideo.onclick = () => { tempStepVideoUrl = null; DOM.modalVideoPrev.classList.add('hidden'); DOM.modalVideoInp.value = ''; };
         }
 
         function updateModalMediaUI() {
@@ -385,8 +499,9 @@
         }
         window.removeTempStepImage = (idx) => { tempStepImages.splice(idx, 1); updateModalMediaUI(); };
 
+        // ================= РЕДАКТОР ЗОБРАЖЕНЬ =================
         let filerobotEditor = null;
-        let activeImageTarget = null; 
+        let activeImageTarget = null;
 
         window.openImageEditorFor = (type, index = null) => {
             let sourceImg = '';
@@ -395,17 +510,17 @@
             else if (type === 'step') sourceImg = tempStepImages[index];
 
             if (!sourceImg || !window.FilerobotImageEditor) return showToast("Завантаження редактора...", true);
-            
+
             activeImageTarget = { type, index };
             DOM.imgEditorModal.classList.remove('hidden');
-            document.getElementById('image-editor-container').innerHTML = ''; 
-            
+            document.getElementById('image-editor-container').innerHTML = '';
+
             const FilerobotImageEditor = window.FilerobotImageEditor;
             filerobotEditor = new FilerobotImageEditor(
                 document.getElementById('image-editor-container'),
                 {
                     source: sourceImg,
-                    onSave: (editedImageObject, designState) => {
+                    onSave: (editedImageObject) => {
                         const newBase64 = editedImageObject.imageBase64;
                         if (activeImageTarget.type === 'main') {
                             state.mainImage = newBase64; DOM.mainImgPrev.src = newBase64; saveLocal();
@@ -431,8 +546,9 @@
             if (filerobotEditor) { filerobotEditor.terminate(); filerobotEditor = null; }
         };
 
-        let isRec = false; 
-        let sttTargetInput = null; 
+        // ================= ГОЛОСОВИЙ ВВІД =================
+        let isRec = false;
+        let sttTargetInput = null;
         let sttTargetBtn = null;
         let sessionBaseText = '';
         let sr = null;
@@ -441,18 +557,18 @@
             if (sr) return sr;
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) return null;
-            
+
             try {
                 sr = new SpeechRecognition();
                 sr.lang = 'uk-UA'; sr.continuous = true; sr.interimResults = true;
-                
-                sr.onstart = () => { 
-                    isRec = true; 
+
+                sr.onstart = () => {
+                    isRec = true;
                     if(sttTargetBtn) { sttTargetBtn.classList.add('bg-red-100', 'text-red-700'); sttTargetBtn.innerHTML = '🔴...'; }
                     showToast("🎤 Запис розпочато. Говоріть...");
                 };
-                
-                sr.onresult = (e) => { 
+
+                sr.onresult = (e) => {
                     let interimTranscript = ''; let finalTranscript = '';
                     for (let i = 0; i < e.results.length; ++i) {
                         if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript;
@@ -461,12 +577,12 @@
                     let currentText = (finalTranscript + interimTranscript).trim().replace(/\s+/g, ' ');
                     if (sttTargetInput) {
                         sttTargetInput.value = sessionBaseText ? (sessionBaseText + ' ' + currentText).trim() : currentText;
-                        sttTargetInput.dispatchEvent(new Event('input')); 
+                        sttTargetInput.dispatchEvent(new Event('input'));
                     }
                 };
-                
+
                 sr.onend = () => { isRec = false; resetSttButtonUI(); showToast("🎤 Голосовий запис завершено"); };
-                sr.onerror = (e) => { isRec = false; resetSttButtonUI(); showToast("Помилка запису", true); };
+                sr.onerror = () => { isRec = false; resetSttButtonUI(); showToast("Помилка запису", true); };
             } catch (err) {}
             return sr;
         }
@@ -481,12 +597,12 @@
         window.toggleGlobalStt = (inputEl, btnEl) => {
             const recognizer = getSpeechRecognition();
             if(!recognizer) return showToast("Голосовий ввід не підтримується", true);
-            
+
             if(isRec) {
                 recognizer.stop();
                 if(sttTargetInput !== inputEl) {
-                    setTimeout(() => { 
-                        sttTargetInput = inputEl; sttTargetBtn = btnEl; sessionBaseText = inputEl.value.trim(); recognizer.start(); 
+                    setTimeout(() => {
+                        sttTargetInput = inputEl; sttTargetBtn = btnEl; sessionBaseText = inputEl.value.trim(); recognizer.start();
                     }, 400);
                 }
             } else {
@@ -495,13 +611,14 @@
             }
         };
 
+        // ================= ШІ (Gemini) =================
         window.runGlobalAi = async (inputEl, btnEl) => {
             const txt = inputEl.value.trim();
             if(!txt) return showToast("Спочатку напишіть текст", true);
-            
+
             let activeKey = (state.settings.apiKey || "").trim();
             if(!activeKey) { showToast("Потрібен API Ключ!", true); return DOM.tabSet.click(); }
-            
+
             const originalHTML = btnEl.innerHTML;
             btnEl.innerHTML = "⏳"; btnEl.disabled = true;
             try {
@@ -512,32 +629,34 @@
 
                 const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if (!response.ok) throw new Error("API Error");
-                
+
                 const data = await response.json();
-                if(data.candidates) { 
-                    inputEl.value = data.candidates[0].content.parts[0].text.trim(); 
+                if(data.candidates) {
+                    inputEl.value = data.candidates[0].content.parts[0].text.trim();
                     inputEl.dispatchEvent(new Event('input'));
-                    showToast("✨ Текст покращено!"); 
+                    showToast("✨ Текст покращено!");
                 }
-            } catch(e) { showToast("Помилка зв'язку з ШІ", true); } 
+            } catch(e) { showToast("Помилка зв'язку з ШІ", true); }
             finally { btnEl.innerHTML = originalHTML; btnEl.disabled = false; }
         };
 
+        // ================= МОДАЛКА КРОКУ =================
         function setupModalButtons() {
             if(DOM.closeStepModal) DOM.closeStepModal.onclick = () => DOM.stepModal.classList.add('hidden');
-            if(DOM.modalClearBtn) DOM.modalClearBtn.onclick = () => { 
-                DOM.modalText.value = ''; tempStepImages = []; updateModalMediaUI(); 
+            if(DOM.modalClearBtn) DOM.modalClearBtn.onclick = () => {
+                DOM.modalText.value = ''; tempStepImages = []; tempStepVideoUrl = null;
+                updateModalMediaUI(); DOM.modalVideoPrev.classList.add('hidden');
             };
             if(DOM.modalSaveBtn) DOM.modalSaveBtn.onclick = () => {
                 const txt = DOM.modalText.value.trim();
-                if(!txt && !tempStepImages.length) return showToast("Додайте текст або фото", true);
+                if(!txt && !tempStepImages.length && !tempStepVideoUrl) return showToast("Додайте текст або фото", true);
                 const node = state.nodes.find(n=>n.id===activeNodeIdForStep);
                 if(node) {
                     if(editingStepId) {
                         const step = node.steps.find(s=>s.id===editingStepId);
-                        step.text = txt; step.images = [...tempStepImages]; 
-                    } else { 
-                        node.steps.push({ id: crypto.randomUUID(), text: txt, images: [...tempStepImages] }); 
+                        step.text = txt; step.images = [...tempStepImages]; step.videoUrl = tempStepVideoUrl;
+                    } else {
+                        node.steps.push({ id: crypto.randomUUID(), text: txt, images: [...tempStepImages], videoUrl: tempStepVideoUrl });
                     }
                     DOM.stepModal.classList.add('hidden'); renderNodes(); saveLocal();
                 }
@@ -548,7 +667,7 @@
             if (DOM.addNodeBtn) DOM.addNodeBtn.onclick = () => {
                 const t = DOM.nodeTitle.value.trim();
                 if(!t && !tempNodeImage) return showToast("Введіть назву вузла", true);
-                
+
                 if (editingNodeId) {
                     const node = state.nodes.find(n => n.id === editingNodeId);
                     if (node) { node.title = t; node.desc = DOM.nodeDesc.value.trim(); node.image = tempNodeImage; }
@@ -559,7 +678,7 @@
                 } else {
                     state.nodes.push({ id: crypto.randomUUID(), title: t, desc: DOM.nodeDesc.value.trim(), image: tempNodeImage, steps: [] });
                 }
-                
+
                 DOM.nodeTitle.value = ''; DOM.nodeDesc.value = ''; tempNodeImage = null; DOM.nodeImgPrevBox.classList.add('hidden');
                 renderNodes(); saveLocal();
             };
@@ -571,18 +690,25 @@
             editingNodeId = node.id;
             DOM.nodeTitle.value = node.title || ''; DOM.nodeDesc.value = node.desc || ''; tempNodeImage = node.image || null;
             if (tempNodeImage) { DOM.nodeImgPrev.src = tempNodeImage; DOM.nodeImgPrevBox.classList.remove('hidden'); } else { DOM.nodeImgPrevBox.classList.add('hidden'); }
-            
+
             DOM.addNodeBtn.textContent = "🔄 Оновити вузол";
             DOM.addNodeBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
             DOM.addNodeBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
             document.getElementById('action-card-node').scrollIntoView({ behavior: 'smooth' });
         };
 
+        window.editStep = (nId, sId) => {
+            activeNodeIdForStep = nId; editingStepId = sId;
+            const step = state.nodes.find(n=>n.id===nId).steps.find(s=>s.id===sId);
+            DOM.modalText.value = step.text || ''; tempStepImages = step.images ? [...step.images] : []; tempStepVideoUrl = step.videoUrl || null;
+            updateModalMediaUI(); DOM.stepModal.classList.remove('hidden');
+        };
+
         function renderNodes() {
             DOM.title.value = state.title; DOM.eq.value = state.equipment;
             if(state.mainImage) { DOM.mainImgPrev.src = state.mainImage; DOM.mainImgBox.classList.remove('hidden'); } else { DOM.mainImgBox.classList.add('hidden'); }
-            
-            DOM.nodesCont.innerHTML = state.nodes.map((node, nIdx) => `
+
+            DOM.nodesCont.innerHTML = state.nodes.map((node) => `
                 <div class="card p-4 sm:p-5 rounded-2xl shadow-sm border-l-4 border-l-indigo-500 relative bg-white">
                     <div class="absolute top-3 right-3 flex gap-1">
                         <button onclick="editNode('${node.id}')" class="text-slate-400 hover:text-blue-500 bg-blue-50 hover:bg-blue-100 p-2 rounded-lg transition-colors">✏️</button>
@@ -624,47 +750,112 @@
 
         window.openStepModal = (nodeId) => {
             activeNodeIdForStep = nodeId; editingStepId = null;
-            DOM.modalText.value = ''; tempStepImages = []; 
-            updateModalMediaUI(); DOM.stepModal.classList.remove('hidden');
-        };
-        
-        window.editStep = (nId, sId) => {
-            activeNodeIdForStep = nId; editingStepId = sId;
-            const step = state.nodes.find(n=>n.id===nId).steps.find(s=>s.id===sId);
-            DOM.modalText.value = step.text || ''; tempStepImages = step.images ? [...step.images] : []; 
-            updateModalMediaUI(); DOM.stepModal.classList.remove('hidden');
+            DOM.modalText.value = ''; tempStepImages = []; tempStepVideoUrl = null;
+            updateModalMediaUI(); DOM.modalVideoPrev.classList.add('hidden'); DOM.stepModal.classList.remove('hidden');
         };
 
+        // ================= НАЛАШТУВАННЯ =================
         function setupSettings() {
+            if(DOM.saveSetBtn) DOM.saveSetBtn.onclick = () => {
+                // Зберігаємо поля, НЕ затираючи логотип
+                state.settings.email = DOM.setEmail.value.trim();
+                state.settings.driveId = DOM.setDrive.value.trim();
+                state.settings.apiKey = DOM.setApi.value.trim();
+                saveLocal();
+                showToast("Налаштування збережено");
+            };
+
+            // Завантаження власного логотипу (стискаємо до висоти 120px)
+            if (DOM.setLogoInp) DOM.setLogoInp.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const MAXH = 120;
+                        const scale = Math.min(MAXH / img.height, 1);
+                        const c = document.createElement('canvas');
+                        c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+                        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                        const dataUrl = c.toDataURL('image/png'); // png — зберігає прозорість лого
+                        state.settings.logo = dataUrl;
+                        DOM.setLogoPrev.src = dataUrl; DOM.setLogoPrevBox.classList.remove('hidden');
+                        DOM.appLogo.src = dataUrl;
+                        saveLocal();
+                        showToast("✅ Логотип збережено — тепер він буде в кожному PDF");
+                    };
+                    img.src = ev.target.result;
+                };
+                reader.readAsDataURL(file);
+                DOM.setLogoInp.value = '';
+            };
+
+            if (DOM.removeLogoBtn) DOM.removeLogoBtn.onclick = () => {
+                state.settings.logo = null;
+                DOM.setLogoPrevBox.classList.add('hidden');
+                DOM.appLogo.src = runtimeLogo || REMOTE_LOGO_URL;
+                saveLocal();
+                showToast("Логотип видалено");
+            };
+
             if (DOM.checkKeyBtn) DOM.checkKeyBtn.onclick = async () => {
                 const key = DOM.setApi.value.trim(); const statusEl = DOM.keyStatusMsg;
                 if (!key) { statusEl.className = 'mt-2 text-xs font-bold text-red-600'; statusEl.innerHTML = '⚠️ Ключ не введено'; statusEl.classList.remove('hidden'); return; }
                 statusEl.className = 'mt-2 text-xs font-bold text-slate-500'; statusEl.innerHTML = '⏳ З\'єднуюсь...'; statusEl.classList.remove('hidden');
                 try {
                     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-                    if (res.ok) { statusEl.className = 'mt-2 text-xs font-bold text-green-600'; statusEl.innerHTML = `✅ Супер! Ключ дійсний.`; state.settings.apiKey = key; saveLocal(); } 
+                    if (res.ok) { statusEl.className = 'mt-2 text-xs font-bold text-green-600'; statusEl.innerHTML = `✅ Супер! Ключ дійсний.`; state.settings.apiKey = key; saveLocal(); }
                     else { statusEl.className = 'mt-2 text-xs font-bold text-red-600'; statusEl.innerHTML = `⚠️ Помилка доступу.`; }
                 } catch (e) { statusEl.className = 'mt-2 text-xs font-bold text-red-600'; statusEl.innerHTML = '⚠️ Помилка мережі.'; }
             };
             if (DOM.setApi) DOM.setApi.addEventListener('input', () => DOM.keyStatusMsg.classList.add('hidden'));
+
+            // ДІАГНОСТИКА ЗВ'ЯЗКУ З APPS SCRIPT
+            if (DOM.testConnBtn) DOM.testConnBtn.onclick = async () => {
+                const el = DOM.connStatusMsg;
+                el.className = 'mt-2 text-xs font-bold text-slate-500 whitespace-pre-wrap'; el.textContent = '⏳ Перевіряю з\'єднання...'; el.classList.remove('hidden');
+                try {
+                    const res = await fetch(GOOGLE_SCRIPT_URL, { method: 'GET' });
+                    const text = await res.text();
+                    if (!res.ok) throw new Error("HTTP " + res.status);
+                    if (text.trim().startsWith('<')) {
+                        // Прийшов HTML замість тексту скрипта — це сторінка входу або помилка деплою
+                        el.className = 'mt-2 text-xs font-bold text-red-600 whitespace-pre-wrap';
+                        el.textContent = "⚠️ Скрипт відповів сторінкою входу Google.\nУ розгортанні поставте доступ: «Будь-хто» (Anyone) і створіть НОВУ версію.";
+                    } else {
+                        el.className = 'mt-2 text-xs font-bold text-green-600 whitespace-pre-wrap';
+                        el.textContent = "✅ Зв'язок є. Відповідь сервера:\n" + text.substring(0, 300);
+                    }
+                } catch (e) {
+                    el.className = 'mt-2 text-xs font-bold text-red-600 whitespace-pre-wrap';
+                    el.textContent = "❌ Немає зв'язку зі скриптом (" + e.message + ").\nПеревірте: 1) URL розгортання; 2) доступ «Будь-хто»; 3) чи створена НОВА версія після зміни коду.";
+                }
+            };
         }
 
-        // Нова надійна функція генерації HTML (без innerHTML +=)
+        // ================= ГЕНЕРАЦІЯ PDF-ШАБЛОНУ =================
         function generatePDFHtml() {
+            // Лого в PDF: завжди локальний base64 (свій / з сайту / вбудований) — ніякого CORS
+            document.getElementById('pdf-logo').src = getActiveLogo();
+
             document.getElementById('pdf-doc-title').textContent = state.title || 'Інструкція з налаштування';
             document.getElementById('pdf-doc-eq').textContent = state.equipment ? `Обладнання: ${state.equipment}` : '';
             document.getElementById('pdf-date-footer').textContent = new Date().toLocaleString('uk-UA');
-            
+
             const pdfMain = document.getElementById('pdf-main-image');
-            if(state.mainImage) { 
-                pdfMain.src = state.mainImage; 
-                pdfMain.style.display = 'inline-block'; 
-            } else { 
-                pdfMain.style.display = 'none'; 
+            const pdfMainBox = document.getElementById('pdf-main-image-container');
+            if(state.mainImage) {
+                pdfMain.src = state.mainImage;
+                pdfMain.style.display = 'inline-block';
+                pdfMainBox.style.display = 'block';
+            } else {
+                pdfMain.removeAttribute('src');
+                pdfMain.style.display = 'none';
+                pdfMainBox.style.display = 'none';
             }
-            
-            let html = ''; // Використовуємо буфер для уникнення багаторазових рендерів DOM
-            
+
+            let html = '';
             state.nodes.forEach((node) => {
                 html += `
                 <div class="avoid-page-break" style="padding: 1.25rem; margin-bottom: 1.5rem; background-color: white; border-radius: 1rem; border: 1px solid #e2e8f0; border-left: 4px solid #6366f1; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
@@ -677,13 +868,12 @@
                     </div>
                     <div style="padding-left: 0.5rem;">
                 `;
-                
+
                 if(node.steps && node.steps.length > 0) {
                     node.steps.forEach((step, idx) => {
                         html += `
                             <div class="avoid-page-break" style="background-color: #f8fafc; padding: 1.25rem; border-radius: 0.75rem; border: 1px solid #e2e8f0; margin-bottom: 1rem; display: flex; gap: 1rem; align-items: flex-start;">
                                 <div style="background-color: #10b981; color: white; width: 1.75rem; height: 1.75rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-size: 0.875rem; font-weight: 700; flex-shrink: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.1); margin-top: 0.25rem;">${idx+1}</div>
-                                
                                 <div style="flex: 1; display: flex; flex-direction: row; gap: 1.5rem; align-items: flex-start;">
                                     ${step.images && step.images.length ?
                                         `<div style="flex: 0 0 45%; max-width: 350px; display: flex; flex-direction: column; gap: 0.75rem;">
@@ -700,157 +890,281 @@
                 }
                 html += `</div></div>`;
             });
-            
+
             document.getElementById('pdf-nodes-container').innerHTML = html;
         }
 
-        // Функція очікування завантаження всіх картинок (запобігає білим квадратам)
         async function waitForImages(container) {
-            const imgs = [...container.querySelectorAll("img")];
+            const imgs = [...container.querySelectorAll("img")].filter(img => img.getAttribute('src'));
             await Promise.all(imgs.map(img => {
                 if (img.complete && img.naturalWidth > 0) return Promise.resolve();
                 return new Promise(resolve => {
                     img.onload = resolve;
-                    img.onerror = resolve; 
+                    img.onerror = resolve;
+                    setTimeout(resolve, 8000); // страховка від вічного очікування
                 });
             }));
         }
 
-        function getPdfConfig() {
+        function getPdfConfig(scale) {
             return {
-                margin: 10, 
-                filename: `${state.title || 'Doc'}.pdf`, 
-                image: { type: 'jpeg', quality: 0.90 }, // Знижено до 0.90 для уникнення таймаутів
+                margin: 10,
+                filename: `${state.title || 'Doc'}.pdf`,
+                image: { type: 'jpeg', quality: 0.9 },
                 pagebreak: { mode: ['css', 'legacy'] },
-                html2canvas: { scale: 1.5, useCORS: true, scrollY: 0, logging: false }, 
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
+                html2canvas: {
+                    scale: scale,
+                    useCORS: true,
+                    allowTaint: false,
+                    imageTimeout: 5000,   // не чекати вічно на биті картинки
+                    scrollY: 0,
+                    logging: false
+                },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
         }
 
-        // ГОЛОВНА ФУНКЦІЯ: Надійний експорт PDF (загорнуто в try/finally)
-        async function createPdfBase64() {
-            generatePDFHtml();
+        function showGenOverlay(text) {
+            DOM.genOverlayText.textContent = text || 'Генерується PDF...';
+            DOM.genOverlay.classList.add('show');
+        }
+        function hideGenOverlay() {
+            DOM.genOverlay.classList.remove('show');
+        }
+
+        // ================= СТВОРЕННЯ PDF (BASE64) =================
+        // Гарантії: інтерфейс ЗАВЖДИ відновлюється (finally),
+        // порожній PDF відсікається, масштаб підлаштовується під
+        // розмір документа (щоб не впертися в ліміт canvas на телефонах).
+        async function createPdfBase64(onStatus) {
+            if (typeof html2pdf === 'undefined') {
+                throw new Error("Бібліотека html2pdf не завантажилась. Перевірте інтернет і перезавантажте сторінку.");
+            }
+
             const pdfEl = document.getElementById("pdf-template");
-            
-            // Робимо видимим ТІЛЬКИ шаблон
+            generatePDFHtml();
             pdfEl.classList.remove("hidden");
             document.body.classList.add("pdf-export-mode");
-            
+
             try {
+                if (onStatus) onStatus("Готую сторінку...");
                 await new Promise(r => requestAnimationFrame(r));
-                await new Promise(r => setTimeout(r, 200)); 
+                await new Promise(r => setTimeout(r, 250));
                 await waitForImages(pdfEl);
-                
-                // Використовуємо Worker для надійності на iOS
-                const worker = html2pdf().set(getPdfConfig()).from(pdfEl);
+
+                // --- ДИНАМІЧНИЙ МАСШТАБ ---
+                // html2canvas малює ВЕСЬ документ на один canvas. У браузерів
+                // (особливо iPhone/Safari) є ліміт ~16 млн пікселів: якщо його
+                // перевищити — canvas стає порожнім і PDF виходить ПУСТИМ.
+                // Тому рахуємо масштаб так, щоб точно влізти в ліміт.
+                const w = pdfEl.scrollWidth || 900;
+                const h = pdfEl.scrollHeight || 1200;
+                const MAX_PIXELS = 13000000; // із запасом від ліміту 16.7 млн
+                let scale = Math.sqrt(MAX_PIXELS / (w * h));
+                scale = Math.min(1.5, Math.max(0.7, scale));
+
+                if (onStatus) onStatus("Генерую PDF...");
+                const worker = html2pdf().set(getPdfConfig(scale)).from(pdfEl);
                 const pdfBlob = await worker.toContainer().toCanvas().toPdf().output("blob");
-                
-                if (pdfBlob.size < 5000) {
-                    throw new Error(`PDF згенеровано порожнім (${pdfBlob.size} байт). Спробуйте ще раз.`);
+
+                if (!pdfBlob || pdfBlob.size < 5000) {
+                    throw new Error(`PDF згенерувався порожнім (${pdfBlob ? pdfBlob.size : 0} байт). Спробуйте зменшити кількість фото або оновити сторінку.`);
                 }
-                
-                return await new Promise((resolve, reject) => {
+
+                if (onStatus) onStatus("Кодую файл...");
+                const base64 = await new Promise((resolve, reject) => {
                     const reader = new FileReader();
                     reader.onloadend = () => resolve(reader.result);
-                    reader.onerror = reject;
+                    reader.onerror = () => reject(new Error("Не вдалося прочитати згенерований PDF."));
                     reader.readAsDataURL(pdfBlob);
                 });
+
+                return { base64: base64, sizeMb: (pdfBlob.size / 1048576).toFixed(1) };
             } finally {
-                // ГАРАНТОВАНО повертаємо інтерфейс назад, навіть якщо була помилка
+                // ЗАВЖДИ повертаємо інтерфейс, навіть якщо була помилка
                 document.body.classList.remove("pdf-export-mode");
                 pdfEl.classList.add("hidden");
             }
         }
 
+        // ================= ВІДПРАВКА НА СЕРВЕР =================
+        // Один надійний канал для всіх запитів до Apps Script.
+        async function postToScript(payload, onStatus) {
+            if (onStatus) onStatus("Відправляю на сервер...");
+
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+            let response;
+            try {
+                response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    // text/plain — свідомо: JSON-заголовок ламає CORS для Apps Script
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload),
+                    signal: controller.signal
+                });
+            } catch (netErr) {
+                if (netErr.name === 'AbortError') {
+                    throw new Error("Сервер не відповів за 3 хвилини. Можливо, файл завеликий або поганий інтернет.");
+                }
+                throw new Error("Немає з'єднання зі скриптом. Перевірте інтернет та розгортання (доступ «Будь-хто», НОВА версія). Деталі: " + netErr.message);
+            } finally {
+                clearTimeout(timer);
+            }
+
+            const rawText = await response.text();
+
+            if (!response.ok) {
+                throw new Error("Сервер повернув помилку HTTP " + response.status + ". Перевірте розгортання скрипта.");
+            }
+
+            let result;
+            try {
+                result = JSON.parse(rawText);
+            } catch (e) {
+                // Прийшов HTML (логін Google / сторінка помилки Apps Script)
+                if (rawText.trim().startsWith('<')) {
+                    throw new Error("Скрипт повернув HTML-сторінку замість відповіді. Причини: доступ розгортання не «Будь-хто», або не створена НОВА версія після зміни коду, або скрипт не авторизований (запустіть setupPermissions у редакторі).");
+                }
+                throw new Error("Незрозуміла відповідь сервера: " + rawText.substring(0, 120));
+            }
+
+            if (result.status !== "success") {
+                throw new Error(result.message || "Сервер повідомив про помилку без деталей.");
+            }
+            return result;
+        }
+
+        // Чистий payload для сервера: тільки те, що йому потрібно.
+        // Без id, без videoUrl (blob-посилання мертві поза цим пристроєм).
+        function buildNodesPayload() {
+            return state.nodes.map(n => ({
+                title: n.title || '',
+                desc: n.desc || '',
+                image: n.image || null,
+                steps: (n.steps || []).map(s => ({
+                    text: s.text || '',
+                    images: s.images || []
+                }))
+            }));
+        }
+
+        function setButtonBusy(btn, busyText) {
+            btn.dataset.original = btn.innerHTML;
+            btn.innerHTML = `<span class="text-lg">⏳</span> ${busyText}`;
+            btn.disabled = true;
+        }
+        function setButtonStatus(btn, text) {
+            btn.innerHTML = `<span class="text-lg">⏳</span> ${text}`;
+        }
+        function restoreButton(btn) {
+            if (btn.dataset.original) btn.innerHTML = btn.dataset.original;
+            btn.disabled = false;
+        }
+
+        // ================= ГОЛОВНІ КНОПКИ =================
         function setupButtons() {
-            if(DOM.saveSetBtn) DOM.saveSetBtn.onclick = () => { state.settings = { email: DOM.setEmail.value.trim(), driveId: DOM.setDrive.value.trim(), apiKey: DOM.setApi.value.trim() }; saveLocal(); showToast("Налаштування збережено"); };
-            if(DOM.btnNewDoc) DOM.btnNewDoc.onclick = () => { state.docId = crypto.randomUUID(); state.title = ''; state.equipment = ''; state.mainImage = null; state.nodes = []; DOM.title.value = ''; DOM.eq.value = ''; saveLocal(); DOM.tabEd.click(); };
-            
-            if(DOM.pdfBtn) DOM.pdfBtn.onclick = async () => { 
-                saveLocal(); 
-                generatePDFHtml(); 
-                const pdfEl = document.getElementById("pdf-template");
-                pdfEl.classList.remove("hidden");
-                document.body.classList.add('pdf-export-mode'); 
-                
-                await new Promise(r => requestAnimationFrame(r));
-                await waitForImages(pdfEl);
-                
-                setTimeout(() => { 
-                    window.print(); 
-                    document.body.classList.remove('pdf-export-mode'); 
-                    pdfEl.classList.add("hidden");
-                }, 500); 
+            if(DOM.btnNewDoc) DOM.btnNewDoc.onclick = () => {
+                state.docId = crypto.randomUUID(); state.title = ''; state.equipment = ''; state.mainImage = null; state.nodes = [];
+                DOM.title.value = ''; DOM.eq.value = '';
+                saveLocal(); DOM.tabEd.click();
             };
-            
+
+            // -------- ЛОКАЛЬНИЙ ДРУК / PDF --------
+            if(DOM.pdfBtn) DOM.pdfBtn.onclick = async () => {
+                saveLocal();
+                if(!state.title && !state.nodes.length) return showToast("Спочатку створіть інструкцію", true);
+
+                const pdfEl = document.getElementById("pdf-template");
+                try {
+                    generatePDFHtml();
+                    pdfEl.classList.remove("hidden");
+                    document.body.classList.add('pdf-export-mode');
+                    await new Promise(r => requestAnimationFrame(r));
+                    await waitForImages(pdfEl);
+                    await new Promise(r => setTimeout(r, 300));
+                    window.print();
+                } catch (e) {
+                    showToast("Помилка підготовки друку: " + e.message, true);
+                } finally {
+                    document.body.classList.remove('pdf-export-mode');
+                    pdfEl.classList.add("hidden");
+                }
+            };
+
+            // -------- ВІДПРАВКА НА ПОШТУ --------
             if(DOM.emailBtn) DOM.emailBtn.onclick = async () => {
                 saveLocal();
-                if(!state.title || !state.nodes.length) return showToast("Спочатку створіть інструкцію", true);
-                if(!state.settings.email) { showToast("Вкажіть Email в налаштуваннях!", true); return DOM.tabSet.click(); }
-                
-                DOM.emailBtn.innerHTML = `<span class="text-lg">⏳</span> Відправка...`; DOM.emailBtn.disabled = true;
+                if(!state.title) return showToast("Вкажіть назву інструкції", true);
+                if(!state.nodes.length) return showToast("Додайте хоча б один вузол", true);
+                if(!state.settings.email) { showToast("Вкажіть Email у налаштуваннях і натисніть «Зберегти»!", true, 5000); return DOM.tabSet.click(); }
+
+                setButtonBusy(DOM.emailBtn, "Готую...");
+                showGenOverlay("Готую документ...");
                 try {
-                    window.scrollTo(0, 0); 
-                    
-                    const pdfBase64 = await createPdfBase64(); // Виклик надійної функції
-                    
-                    const response = await fetch(GOOGLE_SCRIPT_URL, { 
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify({ action: "send_report", title: state.title, equipment: state.equipment, email: state.settings.email, pdfBase64: pdfBase64 }) 
-                    });
-                    
-                    if (!response.ok) throw new Error(`Помилка сервера (Код: ${response.status}). Перевірте розгортання скрипта.`);
-                    
-                    const result = await response.json();
-                    if(result.status === "success") showToast(result.message); else throw new Error(result.message);
-                } catch (e) { 
-                    showToast("Помилка: " + e.message, true); 
-                } finally { DOM.emailBtn.innerHTML = `<span class="text-lg">📧</span> На пошту`; DOM.emailBtn.disabled = false; }
+                    window.scrollTo(0, 0);
+
+                    const pdf = await createPdfBase64(txt => { setButtonStatus(DOM.emailBtn, txt); showGenOverlay(txt); });
+
+                    showGenOverlay("Відправляю на пошту...");
+                    const result = await postToScript({
+                        action: "send_report",
+                        title: state.title,
+                        equipment: state.equipment,
+                        email: state.settings.email,
+                        pdfBase64: pdf.base64
+                    }, txt => setButtonStatus(DOM.emailBtn, txt));
+
+                    showToast("✅ " + result.message + ` (PDF ${pdf.sizeMb} МБ)`, false, 5000);
+                } catch (e) {
+                    console.error("EMAIL ERROR:", e);
+                    showToast("❌ " + e.message, true, 8000);
+                } finally {
+                    hideGenOverlay();
+                    restoreButton(DOM.emailBtn);
+                }
             };
-            
+
+            // -------- ЗБЕРЕЖЕННЯ (Таблиця + PDF на Диск) --------
             if(DOM.saveBtn) DOM.saveBtn.onclick = async () => {
                 saveLocal();
-                if(!state.title || !state.nodes.length) return showToast("Спочатку створіть інструкцію (вузли)", true);
-                
-                DOM.saveBtn.innerHTML = `<span class="text-lg">⏳</span> Збереження...`; DOM.saveBtn.disabled = true;
+                if(!state.title) return showToast("Вкажіть назву інструкції", true);
+                if(!state.nodes.length) return showToast("Додайте хоча б один вузол", true);
+                if(!state.settings.driveId) {
+                    showToast("⚠️ ID папки Диску не вказано — PDF на Диск НЕ збережеться, лише вкладка в таблиці", false, 5000);
+                }
+
+                setButtonBusy(DOM.saveBtn, "Готую...");
+                showGenOverlay("Готую документ...");
                 try {
-                    window.scrollTo(0, 0); 
-                    
-                    const pdfBase64 = await createPdfBase64(); // Виклик надійної функції
+                    window.scrollTo(0, 0);
 
-                    // Щоб не перевантажувати запит (payload limit), ми НЕ відправляємо масив nodes з дублікатами картинок
-                    // Відправляємо лише сам PDF, який збережеться на Диск. Для створення вкладки цього теж достатньо, якщо ми оптимізуємо структуру.
-                    // АЛЕ, оскільки ваш поточний скрипт очікує nodes для вставки в комірки, ми їх залишимо, 
-                    // проте pdf вже гарантовано правильний.
+                    const pdf = await createPdfBase64(txt => { setButtonStatus(DOM.saveBtn, txt); showGenOverlay(txt); });
 
-                    const response = await fetch(GOOGLE_SCRIPT_URL, { 
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify({ 
-                            action: "save_instruction", 
-                            id: state.docId, 
-                            title: state.title, 
-                            equipment: state.equipment, 
-                            date: new Date().toLocaleString('uk-UA'), 
-                            driveId: state.settings.driveId,
-                            pdfBase64: pdfBase64,
-                            nodes: state.nodes 
-                        }) 
-                    });
-                    
-                    if (!response.ok) throw new Error(`Помилка сервера (Код: ${response.status}). Перевірте розгортання скрипта.`);
-                    
-                    const result = await response.json();
-                    if (result.status === "success") showToast(result.message); else throw new Error(result.message);
-                } catch(e) { 
-                    showToast("Помилка: " + e.message, true); 
-                } finally { 
-                    DOM.saveBtn.innerHTML = `<span class="text-lg">☁️</span> Зберегти`; DOM.saveBtn.disabled = false; 
+                    showGenOverlay("Зберігаю в таблицю та на Диск...");
+                    const result = await postToScript({
+                        action: "save_instruction",
+                        title: state.title,
+                        equipment: state.equipment,
+                        date: new Date().toLocaleString('uk-UA'),
+                        driveId: state.settings.driveId,
+                        pdfBase64: pdf.base64,
+                        nodes: buildNodesPayload()
+                    }, txt => setButtonStatus(DOM.saveBtn, txt));
+
+                    showToast("✅ " + result.message, false, 6000);
+                } catch (e) {
+                    console.error("SAVE ERROR:", e);
+                    showToast("❌ " + e.message, true, 8000);
+                } finally {
+                    hideGenOverlay();
+                    restoreButton(DOM.saveBtn);
                 }
             };
         }
 
+        // ================= ЛОКАЛЬНЕ ЗБЕРЕЖЕННЯ =================
         function saveLocal() {
             state.title = DOM.title.value.trim(); state.equipment = DOM.eq.value.trim();
             const docData = { id: state.docId, title: state.title, equipment: state.equipment, mainImage: state.mainImage, nodes: state.nodes, date: Date.now() };
@@ -858,7 +1172,12 @@
                 const idx = state.archive.findIndex(a => a.id === state.docId);
                 if (idx > -1) state.archive[idx] = docData; else state.archive.unshift(docData);
             }
-            localStorage.setItem('foodline_data', JSON.stringify({ currentDoc: docData, archive: state.archive, settings: state.settings }));
+            try {
+                localStorage.setItem('foodline_data', JSON.stringify({ currentDoc: docData, archive: state.archive, settings: state.settings }));
+            } catch (e) {
+                // localStorage переповнений (фото займають місце)
+                showToast("⚠️ Пам'ять пристрою заповнена — старі документи в архіві можуть не зберегтися", true, 5000);
+            }
         }
 
         function loadData() {
@@ -866,7 +1185,7 @@
                 const saved = JSON.parse(localStorage.getItem('foodline_data'));
                 if(saved) {
                     if(saved.archive) state.archive = saved.archive;
-                    if(saved.settings) state.settings = saved.settings;
+                    if(saved.settings) state.settings = Object.assign({ email: '', driveId: '', apiKey: '', logo: null }, saved.settings);
                     if(saved.currentDoc) {
                         state.docId = saved.currentDoc.id || crypto.randomUUID(); state.title = saved.currentDoc.title || ''; state.equipment = saved.currentDoc.equipment || ''; state.mainImage = saved.currentDoc.mainImage || null; state.nodes = saved.currentDoc.nodes || [];
                     }
