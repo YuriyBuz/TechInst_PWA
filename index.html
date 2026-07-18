@@ -712,7 +712,7 @@
                 filename: `${state.title || 'Doc'}.pdf`, 
                 image: { type: 'jpeg', quality: 0.95 }, 
                 pagebreak: { mode: ['css', 'legacy'] }, // Ключовий параметр для avoid-page-break
-                html2canvas: { scale: 1.5, useCORS: true }, 
+                html2canvas: { scale: 1.5, useCORS: true, scrollY: 0 }, // Додано scrollY: 0 для надійності
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
             };
         }
@@ -723,7 +723,9 @@
             
             // ЛОКАЛЬНИЙ ДРУК
             if(DOM.pdfBtn) DOM.pdfBtn.onclick = () => { 
-                saveLocal(); generatePDFHtml(); document.body.classList.add('pdf-export-mode'); 
+                saveLocal(); generatePDFHtml(); 
+                window.scrollTo(0, 0); // ФІКС ПУСТОГО PDF (Прокрутка вгору)
+                document.body.classList.add('pdf-export-mode'); 
                 setTimeout(() => { window.print(); document.body.classList.remove('pdf-export-mode'); }, 500); 
             };
             
@@ -735,7 +737,11 @@
                 
                 DOM.emailBtn.innerHTML = `<span class="text-lg">⏳</span> Відправка...`; DOM.emailBtn.disabled = true;
                 try {
-                    generatePDFHtml(); document.body.classList.add('pdf-export-mode');
+                    window.scrollTo(0, 0); // ФІКС ПУСТОГО PDF
+                    generatePDFHtml(); 
+                    document.body.classList.add('pdf-export-mode');
+                    await new Promise(resolve => setTimeout(resolve, 500)); // Даємо браузеру час відмалювати PDF шаблон
+                    
                     const pdfBase64 = await html2pdf().set(getPdfConfig()).from(document.getElementById('pdf-template')).output('datauristring');
                     document.body.classList.remove('pdf-export-mode');
                     
@@ -759,7 +765,12 @@
                 
                 DOM.saveBtn.innerHTML = `<span class="text-lg">⏳</span> Збереження...`; DOM.saveBtn.disabled = true;
                 try {
-                    generatePDFHtml(); document.body.classList.add('pdf-export-mode');
+                    window.scrollTo(0, 0); // ФІКС ПУСТОГО PDF
+                    generatePDFHtml(); 
+                    document.body.classList.add('pdf-export-mode');
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    // Генеруємо PDF, щоб відправити його на Google Диск
                     const pdfBase64 = await html2pdf().set(getPdfConfig()).from(document.getElementById('pdf-template')).output('datauristring');
                     document.body.classList.remove('pdf-export-mode');
 
@@ -773,7 +784,7 @@
                             equipment: state.equipment, 
                             date: new Date().toLocaleString('uk-UA'), 
                             driveId: state.settings.driveId,
-                            pdfBase64: pdfBase64,
+                            pdfBase64: pdfBase64, // Тепер PDF відправляється і сюди!
                             nodes: state.nodes 
                         }) 
                     });
