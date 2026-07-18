@@ -33,31 +33,28 @@
             @page { margin: 10mm; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
-        
-        /* Зміна логіки експорту: замість body > * приховуємо тільки додаток */
         body.pdf-export-mode > #app-container { display: none !important; }
         body.pdf-export-mode > #pdf-template { display: block !important; }
         body.pdf-export-mode { background: white !important; }
 
-        /* Властивості для заборони розривів всередині блоків (Кроків та Карток) */
         .avoid-page-break {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             break-inside: avoid-page !important;
+            display: block !important;
         }
-
-        #pdf-main-image { width: 100%; height: auto; max-height: 400px; object-fit: contain; margin-bottom: 20px; border: 1px solid #cbd5e1; padding: 4px; border-radius: 12px; }
         .page-break { page-break-before: always; }
     </style>
 </head>
 <body class="font-sans antialiased">
 
+    <!-- Обгортка для всього інтерфейсу, щоб ховати його безпечно під час генерації PDF -->
     <div id="app-container">
         <div class="container mx-auto max-w-2xl p-3 sm:p-6 relative">
             <header class="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
                 <div class="w-1/3"><div id="current-date" class="text-xs font-bold text-slate-500 leading-tight"></div></div>
                 <div class="w-1/3 flex justify-center">
-                    <img id="main-header-logo" src="https://foodline-production.com/wp-content/uploads/2021/10/3752781497_3752781497.webp" alt="Food Line" class="h-10 w-auto rounded-lg bg-white p-1 shadow-sm" onerror="this.src='https://placehold.co/100x40?text=Food+Line';">
+                    <img src="https://foodline-production.com/wp-content/uploads/2021/10/3752781497_3752781497.webp" alt="Food Line" class="h-10 w-auto rounded-lg bg-white p-1 shadow-sm" onerror="this.src='https://placehold.co/100x40?text=Food+Line';">
                 </div>
                 <div class="w-1/3 flex justify-end">
                     <div class="text-xs font-semibold px-3 py-1.5 rounded-full border bg-white flex items-center gap-2 shadow-sm">
@@ -107,10 +104,8 @@
                     </div>
                 </div>
 
-                <!-- Вузли -->
                 <div id="nodes-container" class="space-y-6"></div>
 
-                <!-- Форма створення/редагування ВУЗЛА -->
                 <div id="action-card-node" class="card p-4 sm:p-5 rounded-2xl shadow-md border border-indigo-100 bg-indigo-50/30 relative mt-8">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="font-bold text-indigo-800 flex items-center gap-2">🛠️ Додати новий вузол/частину</h3>
@@ -169,7 +164,7 @@
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">ID папки Google Drive (опціонально)</label>
                             <input type="text" id="set-drive" class="input-field" placeholder="1A2b3C4d5E6f...">
-                            <p class="text-[10px] text-slate-500 mt-1">ID можна взяти з посилання на папку.</p>
+                            <p class="text-[10px] text-slate-500 mt-1">Можна вставити повне посилання, система знайде ID.</p>
                         </div>
                         
                         <div class="pt-4 border-t border-slate-100">
@@ -246,25 +241,25 @@
         <div id="image-editor-container" class="flex-1 w-full bg-slate-900"></div>
     </div>
 
-    <!-- ПРИХОВАНИЙ ШАБЛОН ДЛЯ PDF (Оновлений дизайн, таблиці, лівий/правий блок, великі фото) -->
+    <!-- ПРИХОВАНИЙ ШАБЛОН ДЛЯ PDF (Оновлений дизайн з лого та великими фото зліва) -->
+    <!-- Зверніть увагу: клас hidden залишається, ми його знімаємо динамічно перед генерацією -->
     <div id="pdf-template" class="hidden w-full max-w-4xl mx-auto p-8 bg-white text-slate-800 font-sans">
         
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 2px solid #1e293b; padding-bottom: 16px;">
-            <img id="pdf-header-logo" src="" style="height: 40px; width: auto; object-fit: contain; display: none;">
-            <span class="text-sm font-bold text-slate-400 uppercase tracking-widest">Технічна Інструкція</span>
+        <div class="flex justify-between items-center mb-4 border-b-2 border-slate-800 pb-4">
+            <img src="https://foodline-production.com/wp-content/uploads/2021/10/3752781497_3752781497.webp" alt="Food Line" style="height: 32px; width: auto; object-fit: contain;" crossorigin="anonymous">
+            <span class="text-xs font-bold text-slate-400">ТЕХНІЧНА ІНСТРУКЦІЯ</span>
         </div>
         
         <h1 id="pdf-doc-title" class="text-3xl font-bold text-slate-900 mb-2"></h1>
         <h3 id="pdf-doc-eq" class="text-xl text-slate-600 font-medium mb-6"></h3>
         
         <div class="my-auto text-center avoid-page-break" id="pdf-main-image-container">
-            <img id="pdf-main-image" src="" style="height: auto; max-height: 450px; width: 100%; object-fit: contain; margin-bottom: 20px; border: 1px solid #cbd5e1; padding: 4px; border-radius: 12px; display: inline-block;">
+            <img id="pdf-main-image" src="" style="max-width: 100%; width: auto; height: auto; max-height: 400px; margin-bottom: 20px; border: 1px solid #cbd5e1; padding: 4px; border-radius: 12px; display: inline-block;">
         </div>
         
         <div class="page-break"></div>
 
-        <!-- Контейнер для вузлів та кроків -->
-        <div id="pdf-nodes-container"></div>
+        <div id="pdf-nodes-container" class="space-y-6"></div>
         
         <div class="text-right text-xs text-slate-400 border-t border-slate-200 pt-4 mt-8">
             <span id="pdf-date-footer"></span> • Food Line Production © Автоматичний звіт
@@ -274,7 +269,7 @@
     <div id="toast" class="fixed top-5 right-5 left-5 sm:left-auto bg-slate-800 text-white py-3 px-6 rounded-xl shadow-2xl transform -translate-y-20 opacity-0 transition-all z-[110] font-bold text-center pointer-events-none"></div>
 
     <script>
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyIyskMihG5oaHN_0wPjCWQqTVX1h1UaeuKq1GbHHkkmQ8TSciucx9glRu0PwmNOGV6/exec'; 
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzTk-lKefUkEPZXQlSQOPEBcyvz-yCU83s0aoT1jQ91DE7EUmglLqx3JhGL_BqdCFdJsQ/exec'; 
 
         let state = {
             docId: crypto.randomUUID(), title: '', equipment: '', mainImage: null,
@@ -286,22 +281,6 @@
         let tempStepImages = []; let tempStepVideoUrl = null; let editingStepId = null; 
         let editingNodeId = null;
         let DOM = {}; 
-        let cachedLogoBase64 = null; // Змінна для безпечного збереження логотипу
-
-        // ФІКС ПОРОЖНЬОГО PDF: Попереднє завантаження логотипу у Base64 через Proxy
-        function preloadLogoForPDF() {
-            const img = new Image();
-            img.crossOrigin = "Anonymous";
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = img.width; canvas.height = img.height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0);
-                cachedLogoBase64 = canvas.toDataURL('image/png');
-            };
-            // Безпечний CORS proxy гарантує, що html2canvas не впаде
-            img.src = 'https://images.weserv.nl/?url=foodline-production.com/wp-content/uploads/2021/10/3752781497_3752781497.webp';
-        }
 
         function initDOM() {
             DOM = {
@@ -320,7 +299,6 @@
         }
 
         function initApp() {
-            preloadLogoForPDF(); // Запускаємо завантаження лого одразу при старті
             initDOM();
             DOM.date.textContent = new Date().toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' }); 
             loadData();
@@ -681,19 +659,8 @@
             if (DOM.setApi) DOM.setApi.addEventListener('input', () => DOM.keyStatusMsg.classList.add('hidden'));
         }
 
-        // =========================================================
-        // ГЕНЕРАЦІЯ ДИЗАЙНУ ТАБЛИЦІ PDF ЗІ ЗРАЗКУ ТА ЗБІЛЬШЕННЯМ ФОТО
-        // =========================================================
+        // НОВИЙ НАДІЙНИЙ ГЕНЕРАТОР ШАБЛОНУ (БЕЗ innerHTML +=)
         function generatePDFHtml() {
-            // Вставляємо захищений логотип (Base64) щоб PDF не падав від CORS
-            const pdfLogoEl = document.getElementById('pdf-header-logo');
-            if(cachedLogoBase64) {
-                pdfLogoEl.src = cachedLogoBase64;
-                pdfLogoEl.style.display = 'block';
-            } else {
-                pdfLogoEl.style.display = 'none';
-            }
-
             document.getElementById('pdf-doc-title').textContent = state.title || 'Інструкція з налаштування';
             document.getElementById('pdf-doc-eq').textContent = state.equipment ? `Обладнання: ${state.equipment}` : '';
             document.getElementById('pdf-date-footer').textContent = new Date().toLocaleString('uk-UA');
@@ -706,59 +673,59 @@
                 pdfMain.style.display = 'none'; 
             }
             
-            const cont = document.getElementById('pdf-nodes-container'); 
+            // Використовуємо текстовий акумулятор замість DOM-перемальовок
             let html = '';
             
             state.nodes.forEach((node) => {
-                // Використовуємо HTML-таблиці. Вони ідеально працюють з розривами сторінок в PDF
                 html += `
-                <div style="page-break-inside: avoid; margin-bottom: 24px;">
-                    <!-- Блок ВУЗЛА (Фото 50% зліва, Текст справа) -->
-                    <table style="width: 100%; background: white; border: 1px solid #e2e8f0; border-left: 5px solid #6366f1; border-radius: 12px; border-spacing: 0; margin-bottom: 12px;">
-                        <tr>
-                            ${node.image ? `
-                            <td style="width: 50%; padding: 20px; vertical-align: top;">
-                                <!-- Фото збільшено (50% ширини), зберігає пропорції -->
-                                <img src="${node.image}" style="width: 100%; height: auto; border-radius: 8px; border: 1px solid #e2e8f0; display: block; object-fit: contain;">
-                            </td>
-                            ` : ''}
-                            <td style="padding: 20px; vertical-align: top; width: ${node.image ? '50%' : '100%'};">
-                                <h3 style="font-size: 22px; font-weight: bold; color: #1e293b; margin: 0 0 10px 0;">${node.title || 'Без назви'}</h3>
-                                <p style="color: #475569; font-size: 15px; margin: 0; white-space: pre-wrap; line-height: 1.5;">${node.desc || ''}</p>
-                            </td>
-                        </tr>
-                    </table>
+                <div class="avoid-page-break" style="padding: 1.25rem; margin-bottom: 1.5rem; background-color: white; border-radius: 1rem; border: 1px solid #e2e8f0; border-left: 4px solid #6366f1; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
+                    <div class="avoid-page-break" style="display: flex; flex-direction: row; gap: 1.5rem; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 1rem; align-items: flex-start;">
+                        ${node.image ? `<div style="flex: 0 0 45%; max-width: 350px;"><img src="${node.image}" style="width: 100%; height: auto; max-height: 250px; border-radius: 0.75rem; border: 1px solid #e2e8f0; background: #f8fafc; padding: 4px;"></div>` : ''}
+                        <div style="flex: 1;">
+                            <h3 style="font-size: 1.25rem; font-weight: 700; color: #1e293b; margin: 0 0 0.5rem 0;">${node.title || 'Без назви'}</h3>
+                            ${node.desc ? `<p style="color: #475569; font-size: 0.95rem; margin: 0; white-space: pre-wrap; line-height: 1.5;">${node.desc}</p>` : ''}
+                        </div>
+                    </div>
+                    <div style="padding-left: 0.5rem;">
                 `;
                 
                 if(node.steps && node.steps.length > 0) {
-                    html += `<div style="padding-left: 20px;">`; // Легкий відступ для кроків
                     node.steps.forEach((step, idx) => {
                         html += `
-                        <!-- Блок ДІЇ (Номер, Велике Фото 50% зліва, Текст справа) -->
-                        <table style="width: 100%; margin-bottom: 12px; page-break-inside: avoid; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; border-spacing: 0;">
-                            <tr>
-                                <td style="padding: 16px; vertical-align: top; width: 40px;">
-                                    <div style="background-color: #10b981; color: white; width: 28px; height: 28px; border-radius: 50%; text-align: center; line-height: 28px; font-size: 14px; font-weight: bold;">${idx+1}</div>
-                                </td>
-                                ${step.images && step.images.length ? `
-                                <td style="padding: 16px 0; vertical-align: top; width: 50%;">
-                                    <!-- Фото дії збільшено до 50% -->
-                                    ${step.images.map(i=>`<img src="${i}" style="width: 100%; height: auto; border-radius: 8px; border: 1px solid #cbd5e1; display: block; margin-bottom: 12px; object-fit: contain;">`).join('')}
-                                </td>
-                                ` : ''}
-                                <td style="padding: 16px; vertical-align: top; width: ${step.images && step.images.length ? 'auto' : '100%'};">
-                                    <p style="color: #1e293b; font-size: 15px; margin: 0; white-space: pre-wrap; line-height: 1.6;">${step.text}</p>
-                                </td>
-                            </tr>
-                        </table>
+                            <div class="avoid-page-break" style="background-color: #f8fafc; padding: 1.25rem; border-radius: 0.75rem; border: 1px solid #e2e8f0; margin-bottom: 1rem; display: flex; gap: 1rem; align-items: flex-start;">
+                                <div style="background-color: #10b981; color: white; width: 1.75rem; height: 1.75rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-size: 0.875rem; font-weight: 700; flex-shrink: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.1); margin-top: 0.25rem;">${idx+1}</div>
+                                
+                                <div style="flex: 1; display: flex; flex-direction: row; gap: 1.5rem; align-items: flex-start;">
+                                    ${step.images && step.images.length ?
+                                        `<div style="flex: 0 0 45%; max-width: 350px; display: flex; flex-direction: column; gap: 0.75rem;">
+                                            ${step.images.map(i=>`<img src="${i}" style="width: 100%; height: auto; max-height: 250px; border-radius: 0.5rem; border: 1px solid #cbd5e1; background: white; padding: 4px;">`).join('')}
+                                        </div>`
+                                    : ''}
+                                    <div style="flex: 1;">
+                                        ${step.text ? `<p style="color: #1e293b; font-size: 0.95rem; white-space: pre-wrap; margin: 0; line-height: 1.6;">${step.text}</p>` : ''}
+                                    </div>
+                                </div>
+                            </div>
                         `;
                     });
-                    html += `</div>`;
                 }
-                html += `</div>`; // Закриття avoid-page-break для вузла
+                html += `</div></div>`;
             });
             
-            cont.innerHTML = html;
+            // Вставляємо все відразу (1 рендер замість десятків)
+            document.getElementById('pdf-nodes-container').innerHTML = html;
+        }
+
+        // Функція для очікування повного завантаження всіх картинок
+        async function waitForImages(container) {
+            const imgs = [...container.querySelectorAll("img")];
+            await Promise.all(imgs.map(img => {
+                if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+                return new Promise(resolve => {
+                    img.onload = resolve;
+                    img.onerror = resolve; // Продовжуємо навіть якщо одна зламалась
+                });
+            }));
         }
 
         function getPdfConfig() {
@@ -766,10 +733,52 @@
                 margin: 10, 
                 filename: `${state.title || 'Doc'}.pdf`, 
                 image: { type: 'jpeg', quality: 0.95 }, 
-                pagebreak: { mode: ['css', 'legacy'] }, // Запобігає розривам блоків (avoid-page-break)
-                html2canvas: { scale: 1.5, useCORS: true, scrollY: 0 }, 
+                pagebreak: { mode: ['css', 'legacy'] },
+                html2canvas: { scale: 1.5, useCORS: true, scrollY: 0, logging: false }, 
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
             };
+        }
+
+        // ЄДИНИЙ НАДІЙНИЙ МЕХАНІЗМ СТВОРЕННЯ PDF (Для iOS/Safari/Android)
+        async function createPdfBase64() {
+            generatePDFHtml();
+            const pdfEl = document.getElementById("pdf-template");
+            
+            // 1. Відкриваємо контейнер, щоб браузер порахував розміри
+            pdfEl.classList.remove("hidden");
+            document.body.classList.add("pdf-export-mode");
+            
+            // 2. Чекаємо перемальовки браузером
+            await new Promise(r => requestAnimationFrame(r));
+            await new Promise(r => setTimeout(r, 200)); 
+            
+            // 3. Гарантовано чекаємо декодування всіх картинок
+            await waitForImages(pdfEl);
+            
+            // 4. Поетапний Worker (єдиний стабільний варіант для iOS)
+            const worker = html2pdf().set(getPdfConfig()).from(pdfEl);
+            const pdfBlob = await worker.toContainer().toCanvas().toPdf().output("blob");
+            
+            // 5. Жорстка перевірка на пустий файл (менше 5КБ)
+            if (pdfBlob.size < 5000) {
+                document.body.classList.remove("pdf-export-mode");
+                pdfEl.classList.add("hidden");
+                throw new Error(`Помилка генерації PDF (файл порожній, розмір: ${pdfBlob.size} байт). Спробуйте ще раз.`);
+            }
+            
+            // 6. Конвертація надійного Blob у Base64
+            const base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(pdfBlob);
+            });
+            
+            // 7. Повертаємо інтерфейс
+            document.body.classList.remove("pdf-export-mode");
+            pdfEl.classList.add("hidden");
+            
+            return base64;
         }
 
         function setupButtons() {
@@ -777,11 +786,21 @@
             if(DOM.btnNewDoc) DOM.btnNewDoc.onclick = () => { state.docId = crypto.randomUUID(); state.title = ''; state.equipment = ''; state.mainImage = null; state.nodes = []; DOM.title.value = ''; DOM.eq.value = ''; saveLocal(); DOM.tabEd.click(); };
             
             // ЛОКАЛЬНИЙ ДРУК
-            if(DOM.pdfBtn) DOM.pdfBtn.onclick = () => { 
-                saveLocal(); generatePDFHtml(); 
-                window.scrollTo(0, 0); 
+            if(DOM.pdfBtn) DOM.pdfBtn.onclick = async () => { 
+                saveLocal(); 
+                generatePDFHtml(); 
+                const pdfEl = document.getElementById("pdf-template");
+                pdfEl.classList.remove("hidden");
                 document.body.classList.add('pdf-export-mode'); 
-                setTimeout(() => { window.print(); document.body.classList.remove('pdf-export-mode'); }, 500); 
+                
+                await new Promise(r => requestAnimationFrame(r));
+                await waitForImages(pdfEl);
+                
+                setTimeout(() => { 
+                    window.print(); 
+                    document.body.classList.remove('pdf-export-mode'); 
+                    pdfEl.classList.add("hidden");
+                }, 500); 
             };
             
             // ВІДПРАВКА НА ПОШТУ
@@ -793,13 +812,9 @@
                 DOM.emailBtn.innerHTML = `<span class="text-lg">⏳</span> Відправка...`; DOM.emailBtn.disabled = true;
                 try {
                     window.scrollTo(0, 0); 
-                    generatePDFHtml(); 
-                    document.body.classList.add('pdf-export-mode');
-                    // Даємо браузеру час відмалювати PDF шаблон (збільшено до 800мс для надійності рендеру таблиць)
-                    await new Promise(resolve => setTimeout(resolve, 800)); 
                     
-                    const pdfBase64 = await html2pdf().set(getPdfConfig()).from(document.getElementById('pdf-template')).output('datauristring');
-                    document.body.classList.remove('pdf-export-mode');
+                    // Виклик надійного методу генерації
+                    const pdfBase64 = await createPdfBase64();
                     
                     const response = await fetch(GOOGLE_SCRIPT_URL, { 
                         method: 'POST', 
@@ -810,8 +825,10 @@
                     const result = await response.json();
                     if(result.status === "success") showToast(result.message); else throw new Error(result.message);
                 } catch (e) { 
-                    showToast("Помилка відправки: " + e.message, true); document.body.classList.remove('pdf-export-mode'); 
-                } finally { DOM.emailBtn.innerHTML = `<span class="text-lg">📧</span> На пошту`; DOM.emailBtn.disabled = false; }
+                    showToast("Помилка: " + e.message, true); 
+                } finally { 
+                    DOM.emailBtn.innerHTML = `<span class="text-lg">📧</span> На пошту`; DOM.emailBtn.disabled = false; 
+                }
             };
             
             // ЗБЕРЕЖЕННЯ (Нова вкладка + PDF на Диск)
@@ -822,12 +839,9 @@
                 DOM.saveBtn.innerHTML = `<span class="text-lg">⏳</span> Збереження...`; DOM.saveBtn.disabled = true;
                 try {
                     window.scrollTo(0, 0); 
-                    generatePDFHtml(); 
-                    document.body.classList.add('pdf-export-mode');
-                    await new Promise(resolve => setTimeout(resolve, 800));
                     
-                    const pdfBase64 = await html2pdf().set(getPdfConfig()).from(document.getElementById('pdf-template')).output('datauristring');
-                    document.body.classList.remove('pdf-export-mode');
+                    // Виклик надійного методу генерації
+                    const pdfBase64 = await createPdfBase64();
 
                     const response = await fetch(GOOGLE_SCRIPT_URL, { 
                         method: 'POST', 
@@ -847,8 +861,7 @@
                     const result = await response.json();
                     if (result.status === "success") showToast(result.message); else throw new Error(result.message);
                 } catch(e) { 
-                    document.body.classList.remove('pdf-export-mode');
-                    showToast("Помилка збереження: " + e.message, true); 
+                    showToast("Помилка: " + e.message, true); 
                 } finally { 
                     DOM.saveBtn.innerHTML = `<span class="text-lg">☁️</span> Зберегти`; DOM.saveBtn.disabled = false; 
                 }
