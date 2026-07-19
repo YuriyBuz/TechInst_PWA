@@ -37,13 +37,16 @@
         body.pdf-export-mode > #pdf-template { display: block !important; }
         body.pdf-export-mode { background: white !important; }
 
+        /* ВАЖЛИВО: тут НЕ можна ставити display:block !important —
+           воно перебивало inline display:flex і ламало верстку
+           "фото зліва / текст справа" у готовому PDF. */
         .avoid-page-break {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             break-inside: avoid-page !important;
-            display: block !important;
         }
         .page-break { page-break-before: always; }
+        .page-break.is-off { page-break-before: auto; display: none; }
 
         /* Оверлей під час генерації PDF */
         #gen-overlay { display: none; }
@@ -169,7 +172,7 @@
                             <input type="email" id="set-email" class="input-field" placeholder="example@gmail.com">
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-slate-600 mb-1">ID папки Google Drive (опціонально)</label>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">ID папки Google Drive (для кнопки «Зберегти»)</label>
                             <input type="text" id="set-drive" class="input-field" placeholder="1A2b3C4d5E6f...">
                             <p class="text-[10px] text-slate-500 mt-1">Можна вставити повне посилання, система знайде ID.</p>
                         </div>
@@ -213,7 +216,7 @@
             <div class="container mx-auto max-w-2xl flex gap-2">
                 <button id="save-sheets-btn" class="flex-1 flex flex-col items-center justify-center bg-emerald-600 text-white py-2 rounded-xl font-bold shadow hover:bg-emerald-700 text-xs sm:text-sm transition-colors"><span class="text-lg">☁️</span> Зберегти</button>
                 <button id="email-btn" class="flex-1 flex flex-col items-center justify-center bg-blue-600 text-white py-2 rounded-xl font-bold shadow hover:bg-blue-700 text-xs sm:text-sm transition-colors"><span class="text-lg">📧</span> На пошту</button>
-                <button id="pdf-btn" class="flex-1 flex flex-col items-center justify-center bg-slate-800 text-white py-2 rounded-xl font-bold shadow hover:bg-slate-900 text-xs sm:text-sm transition-colors"><span class="text-lg">📄</span> Друк PDF</button>
+                <button id="pdf-btn" class="flex-1 flex flex-col items-center justify-center bg-slate-800 text-white py-2 rounded-xl font-bold shadow hover:bg-slate-900 text-xs sm:text-sm transition-colors"><span class="text-lg">📄</span> PDF файл</button>
             </div>
         </footer>
     </div>
@@ -285,7 +288,7 @@
             <img id="pdf-main-image" src="" style="max-width: 100%; width: auto; height: auto; max-height: 400px; margin-bottom: 20px; border: 1px solid #cbd5e1; padding: 4px; border-radius: 12px; display: inline-block;">
         </div>
         
-        <div class="page-break"></div>
+        <div id="pdf-page-break" class="page-break"></div>
 
         <div id="pdf-nodes-container" class="space-y-6"></div>
         
@@ -309,7 +312,7 @@
         //  розгортаннями -> Редагувати -> Версія: НОВА -> Розгорнути.
         //  Доступ має бути: "Будь-хто" (Anyone), Виконувати як: "Я".
         // ============================================================
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-Mq_yLALF7Js7epy9so9bxvnVUUQTau7-RxdtWF4YldESYGPGtsRwvKf5z0BrV1onLA/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby98qjcc66dJVsQgZMgCgApwGc7ijinWAt3RDfgQmRJLYuBXSTxGm6liOqNUmWzZo5lyA/exec';
         const FETCH_TIMEOUT_MS = 180000; // 3 хвилини на великі PDF
         const REMOTE_LOGO_URL = 'https://foodline-production.com/wp-content/uploads/2021/10/3752781497_3752781497.webp';
 
@@ -845,14 +848,18 @@
 
             const pdfMain = document.getElementById('pdf-main-image');
             const pdfMainBox = document.getElementById('pdf-main-image-container');
+            const pdfBreak = document.getElementById('pdf-page-break');
             if(state.mainImage) {
                 pdfMain.src = state.mainImage;
                 pdfMain.style.display = 'inline-block';
                 pdfMainBox.style.display = 'block';
+                if (pdfBreak) pdfBreak.classList.remove('is-off');
             } else {
                 pdfMain.removeAttribute('src');
                 pdfMain.style.display = 'none';
                 pdfMainBox.style.display = 'none';
+                // без головного фото примусовий розрив давав порожню першу сторінку
+                if (pdfBreak) pdfBreak.classList.add('is-off');
             }
 
             let html = '';
@@ -906,10 +913,15 @@
             }));
         }
 
+        function safeFileName(t) {
+            const base = String(t || 'Інструкція').replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim().substring(0, 60);
+            return base || 'Інструкція';
+        }
+
         function getPdfConfig(scale) {
             return {
                 margin: 10,
-                filename: `${state.title || 'Doc'}.pdf`,
+                filename: safeFileName(state.title) + '.pdf',
                 image: { type: 'jpeg', quality: 0.9 },
                 pagebreak: { mode: ['css', 'legacy'] },
                 html2canvas: {
@@ -932,11 +944,10 @@
             DOM.genOverlay.classList.remove('show');
         }
 
-        // ================= СТВОРЕННЯ PDF (BASE64) =================
-        // Гарантії: інтерфейс ЗАВЖДИ відновлюється (finally),
-        // порожній PDF відсікається, масштаб підлаштовується під
-        // розмір документа (щоб не впертися в ліміт canvas на телефонах).
-        async function createPdfBase64(onStatus) {
+        // ================= СТВОРЕННЯ PDF =================
+        // ОДНА функція для всіх трьох кнопок. Повертає Blob —
+        // його можна і завантажити локально, і закодувати та відправити.
+        async function createPdf(onStatus) {
             if (typeof html2pdf === 'undefined') {
                 throw new Error("Бібліотека html2pdf не завантажилась. Перевірте інтернет і перезавантажте сторінку.");
             }
@@ -956,35 +967,66 @@
                 // html2canvas малює ВЕСЬ документ на один canvas. У браузерів
                 // (особливо iPhone/Safari) є ліміт ~16 млн пікселів: якщо його
                 // перевищити — canvas стає порожнім і PDF виходить ПУСТИМ.
-                // Тому рахуємо масштаб так, щоб точно влізти в ліміт.
                 const w = pdfEl.scrollWidth || 900;
                 const h = pdfEl.scrollHeight || 1200;
-                const MAX_PIXELS = 13000000; // із запасом від ліміту 16.7 млн
+                const MAX_PIXELS = 13000000;
                 let scale = Math.sqrt(MAX_PIXELS / (w * h));
-                scale = Math.min(1.5, Math.max(0.7, scale));
+                scale = Math.min(1.5, Math.max(0.6, scale));
 
                 if (onStatus) onStatus("Генерую PDF...");
-                const worker = html2pdf().set(getPdfConfig(scale)).from(pdfEl);
-                const pdfBlob = await worker.toContainer().toCanvas().toPdf().output("blob");
+                const blob = await html2pdf().set(getPdfConfig(scale)).from(pdfEl).outputPdf('blob');
 
-                if (!pdfBlob || pdfBlob.size < 5000) {
-                    throw new Error(`PDF згенерувався порожнім (${pdfBlob ? pdfBlob.size : 0} байт). Спробуйте зменшити кількість фото або оновити сторінку.`);
+                if (!blob || blob.size < 5000) {
+                    throw new Error(`PDF згенерувався порожнім (${blob ? blob.size : 0} байт). Спробуйте зменшити кількість фото або оновити сторінку.`);
                 }
 
-                if (onStatus) onStatus("Кодую файл...");
-                const base64 = await new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result);
-                    reader.onerror = () => reject(new Error("Не вдалося прочитати згенерований PDF."));
-                    reader.readAsDataURL(pdfBlob);
-                });
-
-                return { base64: base64, sizeMb: (pdfBlob.size / 1048576).toFixed(1) };
+                return {
+                    blob: blob,
+                    sizeBytes: blob.size,
+                    sizeMb: (blob.size / 1048576).toFixed(1),
+                    filename: safeFileName(state.title) + '.pdf'
+                };
             } finally {
                 // ЗАВЖДИ повертаємо інтерфейс, навіть якщо була помилка
                 document.body.classList.remove("pdf-export-mode");
                 pdfEl.classList.add("hidden");
             }
+        }
+
+        // Blob -> dataURL (потрібно лише для відправки на сервер)
+        function blobToDataUrl(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = () => reject(new Error("Не вдалося прочитати згенерований PDF."));
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        // Локальна віддача файлу: на телефоні — системне меню "Поділитися",
+        // на комп'ютері (і як запасний варіант) — звичайне завантаження.
+        async function deliverPdfLocally(blob, filename) {
+            try {
+                const file = new File([blob], filename, { type: 'application/pdf' });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], title: filename });
+                    return "shared";
+                }
+            } catch (e) {
+                if (e && e.name === 'AbortError') return "cancelled"; // користувач сам закрив меню
+                // будь-яка інша помилка — просто завантажуємо файл
+            }
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.rel = 'noopener';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+            return "downloaded";
         }
 
         // ================= ВІДПРАВКА НА СЕРВЕР =================
@@ -1036,22 +1078,19 @@
             return result;
         }
 
-        // Чистий payload для сервера: тільки те, що йому потрібно.
-        // Без id, без videoUrl (blob-посилання мертві поза цим пристроєм).
+        // Чистий payload для сервера: ТІЛЬКИ ТЕКСТ.
+        // Фото вже є всередині PDF — дублювати їх у запиті означало
+        // подвоїти вагу запиту і покласти сервер на великих інструкціях.
         function buildNodesPayload() {
             return state.nodes.map(n => ({
                 title: n.title || '',
                 desc: n.desc || '',
-                image: n.image || null,
-                steps: (n.steps || []).map(s => ({
-                    text: s.text || '',
-                    images: s.images || []
-                }))
+                steps: (n.steps || []).map(s => ({ text: s.text || '' }))
             }));
         }
 
         function setButtonBusy(btn, busyText) {
-            btn.dataset.original = btn.innerHTML;
+            if (!btn.dataset.original) btn.dataset.original = btn.innerHTML;
             btn.innerHTML = `<span class="text-lg">⏳</span> ${busyText}`;
             btn.disabled = true;
         }
@@ -1071,25 +1110,34 @@
                 saveLocal(); DOM.tabEd.click();
             };
 
-            // -------- ЛОКАЛЬНИЙ ДРУК / PDF --------
+            // -------- ЛОКАЛЬНИЙ PDF (зберегти / поділитися) --------
+            // Раніше тут був window.print(): на телефонах він асинхронний,
+            // тому finally знімав pdf-export-mode ще ДО появи діалогу друку
+            // і на друк ішов інтерфейс додатку або порожня сторінка.
+            // Тепер генеруємо справжній файл і віддаємо його користувачу.
             if(DOM.pdfBtn) DOM.pdfBtn.onclick = async () => {
                 saveLocal();
                 if(!state.title && !state.nodes.length) return showToast("Спочатку створіть інструкцію", true);
 
-                const pdfEl = document.getElementById("pdf-template");
+                setButtonBusy(DOM.pdfBtn, "Готую...");
+                showGenOverlay("Готую документ...");
                 try {
-                    generatePDFHtml();
-                    pdfEl.classList.remove("hidden");
-                    document.body.classList.add('pdf-export-mode');
-                    await new Promise(r => requestAnimationFrame(r));
-                    await waitForImages(pdfEl);
-                    await new Promise(r => setTimeout(r, 300));
-                    window.print();
+                    window.scrollTo(0, 0);
+
+                    const pdf = await createPdf(txt => { setButtonStatus(DOM.pdfBtn, txt); showGenOverlay(txt); });
+
+                    showGenOverlay("Зберігаю файл...");
+                    const how = await deliverPdfLocally(pdf.blob, pdf.filename);
+
+                    if (how === "cancelled") showToast("Скасовано", false);
+                    else if (how === "shared") showToast(`✅ PDF відправлено (${pdf.sizeMb} МБ)`, false, 5000);
+                    else showToast(`✅ PDF збережено: ${pdf.filename} (${pdf.sizeMb} МБ)`, false, 6000);
                 } catch (e) {
-                    showToast("Помилка підготовки друку: " + e.message, true);
+                    console.error("PDF ERROR:", e);
+                    showToast("❌ " + e.message, true, 8000);
                 } finally {
-                    document.body.classList.remove('pdf-export-mode');
-                    pdfEl.classList.add("hidden");
+                    hideGenOverlay();
+                    restoreButton(DOM.pdfBtn);
                 }
             };
 
@@ -1105,15 +1153,27 @@
                 try {
                     window.scrollTo(0, 0);
 
-                    const pdf = await createPdfBase64(txt => { setButtonStatus(DOM.emailBtn, txt); showGenOverlay(txt); });
+                    const pdf = await createPdf(txt => { setButtonStatus(DOM.emailBtn, txt); showGenOverlay(txt); });
+
+                    // Ліміт вкладення Gmail — 25 МБ. Краще сказати одразу,
+                    // ніж чекати 3 хвилини і отримати помилку сервера.
+                    if (pdf.sizeBytes > 20 * 1024 * 1024) {
+                        throw new Error(`PDF завеликий для пошти (${pdf.sizeMb} МБ, ліміт ~25 МБ). Зменшіть кількість фото або розбийте інструкцію.`);
+                    }
+
+                    setButtonStatus(DOM.emailBtn, "Кодую файл...");
+                    showGenOverlay("Кодую файл...");
+                    const base64 = await blobToDataUrl(pdf.blob);
 
                     showGenOverlay("Відправляю на пошту...");
                     const result = await postToScript({
                         action: "send_report",
                         title: state.title,
                         equipment: state.equipment,
+                        date: new Date().toLocaleString('uk-UA'),
                         email: state.settings.email,
-                        pdfBase64: pdf.base64
+                        filename: pdf.filename,
+                        pdfBase64: base64
                     }, txt => setButtonStatus(DOM.emailBtn, txt));
 
                     showToast("✅ " + result.message + ` (PDF ${pdf.sizeMb} МБ)`, false, 5000);
@@ -1126,13 +1186,15 @@
                 }
             };
 
-            // -------- ЗБЕРЕЖЕННЯ (Таблиця + PDF на Диск) --------
+            // -------- ЗБЕРЕЖЕННЯ PDF У ПАПКУ GOOGLE ДИСКУ --------
             if(DOM.saveBtn) DOM.saveBtn.onclick = async () => {
                 saveLocal();
                 if(!state.title) return showToast("Вкажіть назву інструкції", true);
                 if(!state.nodes.length) return showToast("Додайте хоча б один вузол", true);
+                // Раніше збереження йшло навіть без ID папки — PDF просто зникав.
                 if(!state.settings.driveId) {
-                    showToast("⚠️ ID папки Диску не вказано — PDF на Диск НЕ збережеться, лише вкладка в таблиці", false, 5000);
+                    showToast("Вкажіть ID папки Google Диску в налаштуваннях і натисніть «Зберегти»!", true, 6000);
+                    return DOM.tabSet.click();
                 }
 
                 setButtonBusy(DOM.saveBtn, "Готую...");
@@ -1140,20 +1202,25 @@
                 try {
                     window.scrollTo(0, 0);
 
-                    const pdf = await createPdfBase64(txt => { setButtonStatus(DOM.saveBtn, txt); showGenOverlay(txt); });
+                    const pdf = await createPdf(txt => { setButtonStatus(DOM.saveBtn, txt); showGenOverlay(txt); });
 
-                    showGenOverlay("Зберігаю в таблицю та на Диск...");
+                    setButtonStatus(DOM.saveBtn, "Кодую файл...");
+                    showGenOverlay("Кодую файл...");
+                    const base64 = await blobToDataUrl(pdf.blob);
+
+                    showGenOverlay("Зберігаю на Диск...");
                     const result = await postToScript({
                         action: "save_instruction",
                         title: state.title,
                         equipment: state.equipment,
                         date: new Date().toLocaleString('uk-UA'),
                         driveId: state.settings.driveId,
-                        pdfBase64: pdf.base64,
+                        filename: pdf.filename,
+                        pdfBase64: base64,
                         nodes: buildNodesPayload()
                     }, txt => setButtonStatus(DOM.saveBtn, txt));
 
-                    showToast("✅ " + result.message, false, 6000);
+                    showToast("✅ " + result.message + ` (${pdf.sizeMb} МБ)`, false, 6000);
                 } catch (e) {
                     console.error("SAVE ERROR:", e);
                     showToast("❌ " + e.message, true, 8000);
