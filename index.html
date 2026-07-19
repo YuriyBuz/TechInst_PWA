@@ -181,6 +181,15 @@
                             <input type="text" id="set-photo-drive" class="input-field" placeholder="1A2b3C4d5E6f...">
                             <p class="text-[10px] text-slate-500 mt-1">Фото зберігаються у підпапку з назвою інструкції, а в таблицю потрапляє посилання на кожне.</p>
                         </div>
+                        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                            <label class="flex items-start gap-3 cursor-pointer">
+                                <input type="checkbox" id="set-single-page" class="mt-0.5 w-5 h-5 accent-emerald-600 flex-shrink-0">
+                                <span>
+                                    <span class="block text-xs font-bold text-slate-700">PDF одним суцільним аркушем</span>
+                                    <span class="block text-[10px] text-slate-500 mt-0.5">Без розривів сторінок — зручно гортати на телефоні. Зніміть галочку, якщо документ треба друкувати на А4.</span>
+                                </span>
+                            </label>
+                        </div>
 
                         <div class="pt-4 border-t border-slate-100">
                             <label class="block text-xs font-bold text-slate-600 mb-1">Логотип компанії (для PDF та шапки)</label>
@@ -364,7 +373,7 @@
         let state = {
             docId: crypto.randomUUID(), title: '', equipment: '', mainImage: null,
             nodes: [], archive: [],
-            settings: { email: 'Buznitskiy7@gmail.com', driveId: '', photoDriveId: '1HVA32yxdk2jUMZwDmFeGGbbduelgy266', apiKey: '', aiModel: '', logo: null }
+            settings: { email: 'Buznitskiy7@gmail.com', driveId: '', photoDriveId: '1HVA32yxdk2jUMZwDmFeGGbbduelgy266', apiKey: '', aiModel: '', singlePage: true, logo: null }
         };
 
         let tempNodeImage = null; let activeNodeIdForStep = null;
@@ -381,7 +390,7 @@
                 mainImgInp: document.getElementById('main-photo-input'), mainImgPrev: document.getElementById('main-image-preview'), mainImgBox: document.getElementById('main-image-preview-container'), removeMainImg: document.getElementById('remove-main-img'),
                 nodesCont: document.getElementById('nodes-container'), nodeTitle: document.getElementById('node-title'), nodeDesc: document.getElementById('node-desc'), nodeImgInp: document.getElementById('node-photo-input'), nodeImgPrevBox: document.getElementById('node-img-preview-box'), nodeImgPrev: document.getElementById('node-img-preview'), removeNodeImg: document.getElementById('remove-node-img'), addNodeBtn: document.getElementById('add-node-btn'),
                 stepModal: document.getElementById('step-modal'), closeStepModal: document.getElementById('close-step-modal'), modalText: document.getElementById('modal-step-text'), modalPhotoInp: document.getElementById('modal-photo-input'), modalMediaPrev: document.getElementById('modal-media-preview'), modalVideoInp: document.getElementById('modal-video-input'), modalVideoPrev: document.getElementById('modal-video-preview'), removeModalVideo: document.getElementById('remove-modal-video'), modalSaveBtn: document.getElementById('modal-save-btn'), modalClearBtn: document.getElementById('modal-clear-btn'),
-                setEmail: document.getElementById('set-email'), setDrive: document.getElementById('set-drive'), setPhotoDrive: document.getElementById('set-photo-drive'), setApi: document.getElementById('set-api-key'), saveSetBtn: document.getElementById('save-settings-btn'), checkKeyBtn: document.getElementById('check-key-btn'), keyStatusMsg: document.getElementById('key-status-msg'),
+                setEmail: document.getElementById('set-email'), setDrive: document.getElementById('set-drive'), setPhotoDrive: document.getElementById('set-photo-drive'), setSinglePage: document.getElementById('set-single-page'), setApi: document.getElementById('set-api-key'), saveSetBtn: document.getElementById('save-settings-btn'), checkKeyBtn: document.getElementById('check-key-btn'), keyStatusMsg: document.getElementById('key-status-msg'),
                 testConnBtn: document.getElementById('test-conn-btn'), connStatusMsg: document.getElementById('conn-status-msg'),
                 setLogoInp: document.getElementById('set-logo-input'), setLogoPrev: document.getElementById('set-logo-preview'), setLogoPrevBox: document.getElementById('set-logo-preview-box'), removeLogoBtn: document.getElementById('remove-logo-btn'),
                 genOverlay: document.getElementById('gen-overlay'), genOverlayText: document.getElementById('gen-overlay-text'),
@@ -455,6 +464,7 @@
                     DOM.setEmail.value = state.settings.email || '';
                     DOM.setDrive.value = state.settings.driveId || '';
                     DOM.setPhotoDrive.value = state.settings.photoDriveId || '';
+                    DOM.setSinglePage.checked = state.settings.singlePage !== false;
                     DOM.setApi.value = state.settings.apiKey || '';
                     DOM.keyStatusMsg.classList.add('hidden');
                     DOM.connStatusMsg.classList.add('hidden');
@@ -532,7 +542,7 @@
                 document.getElementById('image-editor-container'),
                 {
                     source: sourceImg,
-                    onSave: (editedImageObject) => {
+                    onSave: (editedImageObject, designState) => {
                         const newBase64 = editedImageObject.imageBase64;
                         if (activeImageTarget.type === 'main') {
                             state.mainImage = newBase64; DOM.mainImgPrev.src = newBase64; saveLocal();
@@ -545,9 +555,16 @@
                     },
                     onClose: closeImageEditor,
                     translations: {
-                        profile: 'Профіль', coverPhoto: 'Обкладинка', cancel: 'Скасувати', save: 'Зберегти',
-                        apply: 'Застосувати', reset: 'Скинути', crop: 'Обрізати', annotate: 'Малювати'
-                    }
+                        profile: 'Профіль', coverPhoto: 'Обкладинка', cancel: 'Скасувати', save: 'Зберегти', saveAs: 'Зберегти',
+                        apply: 'Застосувати', reset: 'Скинути', crop: 'Обрізати', annotate: 'Малювати', arrow: 'Стрілка',
+                        text: 'Текст', ellipse: 'Коло', rectangle: 'Прямокутник', pen: 'Маркер', orientation: 'Орієнтація',
+                        polygon: 'Многокутник', image: 'Зображення', line: 'Лінія'
+                    },
+                    tabsIds: ['Annotate', 'Crop', 'Adjust'],
+                    defaultTabId: 'Annotate',
+                    defaultToolId: 'Arrow',
+                    annotationsCommon: { fill: '#ff0000', stroke: '#ff0000', strokeWidth: 3 },
+                    Text: { text: 'Ваш текст', fontFamily: 'Arial', fonts: ['Arial', 'Times New Roman'] }
                 }
             );
             filerobotEditor.render();
@@ -933,6 +950,7 @@
                 state.settings.email = DOM.setEmail.value.trim();
                 state.settings.driveId = DOM.setDrive.value.trim();
                 state.settings.photoDriveId = DOM.setPhotoDrive.value.trim();
+                state.settings.singlePage = DOM.setSinglePage.checked;
                 const newKey = DOM.setApi.value.trim();
                 // ключ змінився -> забуваємо запам'ятану модель, підберемо наново
                 if (newKey !== state.settings.apiKey) state.settings.aiModel = '';
@@ -1097,12 +1115,15 @@
             return base || 'Інструкція';
         }
 
-        function getPdfConfig(scale) {
+        // pageFormat: 'a4' або [ширина, висота] в мм для суцільного аркуша
+        function getPdfConfig(scale, pageFormat) {
+            const continuous = Array.isArray(pageFormat);
             return {
                 margin: 10,
                 filename: safeFileName(state.title) + '.pdf',
                 image: { type: 'jpeg', quality: 0.9 },
-                pagebreak: { mode: ['css', 'legacy'] },
+                // На суцільному аркуші розриви не потрібні — вимикаємо їх зовсім
+                pagebreak: continuous ? { mode: [] } : { mode: ['css', 'legacy'] },
                 html2canvas: {
                     scale: scale,
                     useCORS: true,
@@ -1111,7 +1132,7 @@
                     scrollY: 0,
                     logging: false
                 },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                jsPDF: { unit: 'mm', format: pageFormat || 'a4', orientation: 'portrait' }
             };
         }
 
@@ -1153,7 +1174,28 @@
                 scale = Math.min(1.5, Math.max(0.6, scale));
 
                 if (onStatus) onStatus("Генерую PDF...");
-                const blob = await html2pdf().set(getPdfConfig(scale)).from(pdfEl).outputPdf('blob');
+
+                // --- СУЦІЛЬНИЙ АРКУШ ---
+                // Замість А4 робимо один аркуш заввишки з увесь документ.
+                // Ширину лишаємо 210 мм, висоту рахуємо за пропорціями сторінки.
+                let pageFormat = null;
+                if (state.settings.singlePage !== false) {
+                    const MARGIN = 10;
+                    const PAGE_W = 210;
+                    const MAX_H = 5000;   // межа формату PDF — близько 5080 мм
+                    let pageH = (PAGE_W - MARGIN * 2) * (h / w) + MARGIN * 2;
+
+                    if (pageH > MAX_H) {
+                        // Документ надто довгий для одного аркуша — вертаємось до А4
+                        showToast("Документ задовгий для суцільного аркуша — зроблено посторінково", false, 6000);
+                    } else {
+                        pageFormat = [PAGE_W, Math.ceil(pageH)];
+                        const pdfBreak = document.getElementById('pdf-page-break');
+                        if (pdfBreak) pdfBreak.classList.add('is-off');
+                    }
+                }
+
+                const blob = await html2pdf().set(getPdfConfig(scale, pageFormat)).from(pdfEl).outputPdf('blob');
 
                 if (!blob || blob.size < 5000) {
                     throw new Error(`PDF згенерувався порожнім (${blob ? blob.size : 0} байт). Спробуйте зменшити кількість фото або оновити сторінку.`);
@@ -1525,7 +1567,7 @@
                 const saved = JSON.parse(localStorage.getItem('foodline_data'));
                 if(saved) {
                     if(saved.archive) state.archive = saved.archive;
-                    if(saved.settings) state.settings = Object.assign({ email: '', driveId: '', photoDriveId: '1HVA32yxdk2jUMZwDmFeGGbbduelgy266', apiKey: '', aiModel: '', logo: null }, saved.settings);
+                    if(saved.settings) state.settings = Object.assign({ email: '', driveId: '', photoDriveId: '1HVA32yxdk2jUMZwDmFeGGbbduelgy266', apiKey: '', aiModel: '', singlePage: true, logo: null }, saved.settings);
                     if(saved.currentDoc) {
                         state.docId = saved.currentDoc.id || crypto.randomUUID(); state.title = saved.currentDoc.title || ''; state.equipment = saved.currentDoc.equipment || ''; state.mainImage = saved.currentDoc.mainImage || null; state.nodes = saved.currentDoc.nodes || [];
                     }
