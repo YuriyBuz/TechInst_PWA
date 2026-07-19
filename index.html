@@ -172,9 +172,14 @@
                             <input type="email" id="set-email" class="input-field" placeholder="example@gmail.com">
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-slate-600 mb-1">ID папки Google Drive (для кнопки «Зберегти»)</label>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Папка для PDF (кнопка «Зберегти»)</label>
                             <input type="text" id="set-drive" class="input-field" placeholder="1A2b3C4d5E6f...">
                             <p class="text-[10px] text-slate-500 mt-1">Можна вставити повне посилання, система знайде ID.</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Папка для фото (посилання в таблиці)</label>
+                            <input type="text" id="set-photo-drive" class="input-field" placeholder="1A2b3C4d5E6f...">
+                            <p class="text-[10px] text-slate-500 mt-1">Фото зберігаються у підпапку з назвою інструкції, а в таблицю потрапляє посилання на кожне.</p>
                         </div>
 
                         <div class="pt-4 border-t border-slate-100">
@@ -312,7 +317,7 @@
         //  розгортаннями -> Редагувати -> Версія: НОВА -> Розгорнути.
         //  Доступ має бути: "Будь-хто" (Anyone), Виконувати як: "Я".
         // ============================================================
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyN76c9QxEr0pU7ubSt125hR4CNaEaLkvIsfn9c-an21Ve9iXUP7WBisNQK4UmZb1y4yw/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxLKSTWJr_Q7epfjtdBwoUgsn4nNWwwEj_1x_e-NsFAMt2aENEMunN3RkgVjxbuYf7QPQ/exec';
         const FETCH_TIMEOUT_MS = 180000; // 3 хвилини на великі PDF
         // Логотип лежить поруч з index.html у тому ж репозиторії GitHub.
         // Свій домен = немає CORS, тому canvas завжди зможе перевести його в base64 для PDF.
@@ -359,7 +364,7 @@
         let state = {
             docId: crypto.randomUUID(), title: '', equipment: '', mainImage: null,
             nodes: [], archive: [],
-            settings: { email: 'Buznitskiy7@gmail.com', driveId: '', apiKey: '', logo: null }
+            settings: { email: 'Buznitskiy7@gmail.com', driveId: '', photoDriveId: '1HVA32yxdk2jUMZwDmFeGGbbduelgy266', apiKey: '', aiModel: '', logo: null }
         };
 
         let tempNodeImage = null; let activeNodeIdForStep = null;
@@ -376,7 +381,7 @@
                 mainImgInp: document.getElementById('main-photo-input'), mainImgPrev: document.getElementById('main-image-preview'), mainImgBox: document.getElementById('main-image-preview-container'), removeMainImg: document.getElementById('remove-main-img'),
                 nodesCont: document.getElementById('nodes-container'), nodeTitle: document.getElementById('node-title'), nodeDesc: document.getElementById('node-desc'), nodeImgInp: document.getElementById('node-photo-input'), nodeImgPrevBox: document.getElementById('node-img-preview-box'), nodeImgPrev: document.getElementById('node-img-preview'), removeNodeImg: document.getElementById('remove-node-img'), addNodeBtn: document.getElementById('add-node-btn'),
                 stepModal: document.getElementById('step-modal'), closeStepModal: document.getElementById('close-step-modal'), modalText: document.getElementById('modal-step-text'), modalPhotoInp: document.getElementById('modal-photo-input'), modalMediaPrev: document.getElementById('modal-media-preview'), modalVideoInp: document.getElementById('modal-video-input'), modalVideoPrev: document.getElementById('modal-video-preview'), removeModalVideo: document.getElementById('remove-modal-video'), modalSaveBtn: document.getElementById('modal-save-btn'), modalClearBtn: document.getElementById('modal-clear-btn'),
-                setEmail: document.getElementById('set-email'), setDrive: document.getElementById('set-drive'), setApi: document.getElementById('set-api-key'), saveSetBtn: document.getElementById('save-settings-btn'), checkKeyBtn: document.getElementById('check-key-btn'), keyStatusMsg: document.getElementById('key-status-msg'),
+                setEmail: document.getElementById('set-email'), setDrive: document.getElementById('set-drive'), setPhotoDrive: document.getElementById('set-photo-drive'), setApi: document.getElementById('set-api-key'), saveSetBtn: document.getElementById('save-settings-btn'), checkKeyBtn: document.getElementById('check-key-btn'), keyStatusMsg: document.getElementById('key-status-msg'),
                 testConnBtn: document.getElementById('test-conn-btn'), connStatusMsg: document.getElementById('conn-status-msg'),
                 setLogoInp: document.getElementById('set-logo-input'), setLogoPrev: document.getElementById('set-logo-preview'), setLogoPrevBox: document.getElementById('set-logo-preview-box'), removeLogoBtn: document.getElementById('remove-logo-btn'),
                 genOverlay: document.getElementById('gen-overlay'), genOverlayText: document.getElementById('gen-overlay-text'),
@@ -449,6 +454,7 @@
                     hideAll(); DOM.viewSet.classList.remove('hidden'); DOM.tabSet.className = actCls;
                     DOM.setEmail.value = state.settings.email || '';
                     DOM.setDrive.value = state.settings.driveId || '';
+                    DOM.setPhotoDrive.value = state.settings.photoDriveId || '';
                     DOM.setApi.value = state.settings.apiKey || '';
                     DOM.keyStatusMsg.classList.add('hidden');
                     DOM.connStatusMsg.classList.add('hidden');
@@ -696,32 +702,114 @@
         };
 
         // ================= ШІ (Gemini) =================
+        // Раніше модель була зашита жорстко ('gemini-1.5-flash') — щойно Google
+        // прибирає її з доступу, будь-який запит падає, а користувач бачив
+        // безлике "Помилка зв'язку з ШІ". Тепер модель підбирається сама,
+        // а текст помилки показується справжній.
+        const AI_MODEL_PREFS = [
+            'gemini-2.5-flash',
+            'gemini-2.0-flash',
+            'gemini-flash-latest',
+            'gemini-1.5-flash'
+        ];
+
+        function apiErrorText(data, fallback) {
+            if (data && data.error && data.error.message) return data.error.message;
+            return fallback || "Невідома помилка API";
+        }
+
+        // Питаємо в Google, які моделі реально доступні цьому ключу.
+        async function resolveAiModel(key, force) {
+            if (!force && state.settings.aiModel) return state.settings.aiModel;
+
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`);
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(apiErrorText(data, "Недійсний API ключ або немає доступу (HTTP " + res.status + ")"));
+
+            const available = (data.models || [])
+                .filter(m => (m.supportedGenerationMethods || []).indexOf('generateContent') > -1)
+                .map(m => String(m.name || '').replace('models/', ''))
+                .filter(n => n.indexOf('gemini') === 0);
+
+            if (!available.length) throw new Error("Ключ дійсний, але жодна модель Gemini не доступна для генерації.");
+
+            let chosen = AI_MODEL_PREFS.find(p => available.indexOf(p) > -1);
+            if (!chosen) chosen = available.find(n => n.indexOf('flash') > -1 && n.indexOf('lite') === -1);
+            if (!chosen) chosen = available.find(n => n.indexOf('flash') > -1);
+            if (!chosen) chosen = available[0];
+
+            state.settings.aiModel = chosen;
+            saveLocal();
+            return chosen;
+        }
+
+        async function askGemini(key, model, promptText) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
+            const payload = {
+                contents: [{ parts: [{ text: promptText }] }],
+                generationConfig: { temperature: 0.3 }
+            };
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                const err = new Error(apiErrorText(data, "HTTP " + res.status));
+                err.httpStatus = res.status;
+                throw err;
+            }
+            const parts = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
+            const text = parts && parts[0] && parts[0].text;
+            if (!text) {
+                if (data.promptFeedback && data.promptFeedback.blockReason) {
+                    throw new Error("Запит заблоковано фільтром Google: " + data.promptFeedback.blockReason);
+                }
+                throw new Error("Модель повернула порожню відповідь.");
+            }
+            return text.trim();
+        }
+
         window.runGlobalAi = async (inputEl, btnEl) => {
             const txt = inputEl.value.trim();
-            if(!txt) return showToast("Спочатку напишіть текст", true);
+            if (!txt) return showToast("Спочатку напишіть текст", true);
 
-            let activeKey = (state.settings.apiKey || "").trim();
-            if(!activeKey) { showToast("Потрібен API Ключ!", true); return DOM.tabSet.click(); }
+            const activeKey = (state.settings.apiKey || "").trim();
+            if (!activeKey) { showToast("Потрібен API Ключ!", true); return DOM.tabSet.click(); }
 
             const originalHTML = btnEl.innerHTML;
             btnEl.innerHTML = "⏳"; btnEl.disabled = true;
+
+            const prompt = "Виправ граматичні та пунктуаційні помилки, покращ стиль. " +
+                           "Це технічна інструкція з налаштування обладнання — збережи всі терміни та числа без змін. " +
+                           "Поверни ЛИШЕ виправлений текст, без пояснень.\n\nТекст: " + txt;
+
             try {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${activeKey}`;
-                const payload = {
-                    contents: [{ parts: [{ text: `Виправ граматичні помилки, покращ стиль. Поверни лише текст.\n\nТекст: ${txt}` }] }]
-                };
-
-                const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!response.ok) throw new Error("API Error");
-
-                const data = await response.json();
-                if(data.candidates) {
-                    inputEl.value = data.candidates[0].content.parts[0].text.trim();
-                    inputEl.dispatchEvent(new Event('input'));
-                    showToast("✨ Текст покращено!");
+                let model = await resolveAiModel(activeKey, false);
+                let result;
+                try {
+                    result = await askGemini(activeKey, model, prompt);
+                } catch (e) {
+                    // Модель могли прибрати вже після того, як ми її запам'ятали —
+                    // питаємо список наново і пробуємо ще раз.
+                    if (e.httpStatus === 404 || e.httpStatus === 400) {
+                        model = await resolveAiModel(activeKey, true);
+                        result = await askGemini(activeKey, model, prompt);
+                    } else {
+                        throw e;
+                    }
                 }
-            } catch(e) { showToast("Помилка зв'язку з ШІ", true); }
-            finally { btnEl.innerHTML = originalHTML; btnEl.disabled = false; }
+
+                inputEl.value = result;
+                inputEl.dispatchEvent(new Event('input'));
+                showToast("✨ Текст покращено (" + model + ")");
+            } catch (e) {
+                console.error("AI ERROR:", e);
+                showToast("❌ ШІ: " + e.message, true, 8000);
+            } finally {
+                btnEl.innerHTML = originalHTML; btnEl.disabled = false;
+            }
         };
 
         // ================= МОДАЛКА КРОКУ =================
@@ -844,7 +932,11 @@
                 // Зберігаємо поля, НЕ затираючи логотип
                 state.settings.email = DOM.setEmail.value.trim();
                 state.settings.driveId = DOM.setDrive.value.trim();
-                state.settings.apiKey = DOM.setApi.value.trim();
+                state.settings.photoDriveId = DOM.setPhotoDrive.value.trim();
+                const newKey = DOM.setApi.value.trim();
+                // ключ змінився -> забуваємо запам'ятану модель, підберемо наново
+                if (newKey !== state.settings.apiKey) state.settings.aiModel = '';
+                state.settings.apiKey = newKey;
                 saveLocal();
                 showToast("Налаштування збережено");
             };
@@ -888,10 +980,16 @@
                 if (!key) { statusEl.className = 'mt-2 text-xs font-bold text-red-600'; statusEl.innerHTML = '⚠️ Ключ не введено'; statusEl.classList.remove('hidden'); return; }
                 statusEl.className = 'mt-2 text-xs font-bold text-slate-500'; statusEl.innerHTML = '⏳ З\'єднуюсь...'; statusEl.classList.remove('hidden');
                 try {
-                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-                    if (res.ok) { statusEl.className = 'mt-2 text-xs font-bold text-green-600'; statusEl.innerHTML = `✅ Супер! Ключ дійсний.`; state.settings.apiKey = key; saveLocal(); }
-                    else { statusEl.className = 'mt-2 text-xs font-bold text-red-600'; statusEl.innerHTML = `⚠️ Помилка доступу.`; }
-                } catch (e) { statusEl.className = 'mt-2 text-xs font-bold text-red-600'; statusEl.innerHTML = '⚠️ Помилка мережі.'; }
+                    state.settings.apiKey = key;
+                    // force=true — перезапитуємо список моделей, а не беремо з пам'яті
+                    const model = await resolveAiModel(key, true);
+                    statusEl.className = 'mt-2 text-xs font-bold text-green-600';
+                    statusEl.innerHTML = '✅ Ключ дійсний. Модель: ' + model;
+                    saveLocal();
+                } catch (e) {
+                    statusEl.className = 'mt-2 text-xs font-bold text-red-600';
+                    statusEl.textContent = '⚠️ ' + e.message;
+                }
             };
             if (DOM.setApi) DOM.setApi.addEventListener('input', () => DOM.keyStatusMsg.classList.add('hidden'));
 
@@ -1159,52 +1257,92 @@
             return result;
         }
 
-        // ================= ФОТО ДЛЯ ТАБЛИЦІ =================
-        // У PDF ідуть повні фото. У Google-таблицю шлемо стиснені мініатюри:
-        // вони й так відображаються там маленькими, а вага запиту падає в рази.
-        const SHEET_THUMB_PX = 420;
-        const SHEET_MAX_IMAGES_PER_ROW = 3;
+        // ================= ФОТО В ПАПКУ ДИСКУ =================
+        // Фото більше не вставляються картинками в таблицю (це роздувало
+        // таблицю і запит). Вони кладуться повним розміром у папку Диску
+        // з осмисленою назвою, а в комірку йде посилання.
 
-        function makeThumb(dataUrl, maxPx, quality) {
-            return new Promise(resolve => {
-                if (!dataUrl) return resolve(null);
-                const img = new Image();
-                img.onload = () => {
-                    try {
-                        const scale = Math.min(maxPx / img.width, maxPx / img.height, 1);
-                        const c = document.createElement('canvas');
-                        c.width = Math.max(1, Math.round(img.width * scale));
-                        c.height = Math.max(1, Math.round(img.height * scale));
-                        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-                        resolve(c.toDataURL('image/jpeg', quality || 0.6));
-                    } catch (e) { resolve(null); }
-                };
-                img.onerror = () => resolve(null);
-                img.src = dataUrl;
-            });
+        const PHOTOS_PER_REQUEST = 3;   // скільки фото в одному запиті до сервера
+
+        function cleanNamePart(t, max) {
+            return String(t || '')
+                .replace(/[\\/:*?"<>|#\[\]]+/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .substring(0, max || 40) || 'без назви';
         }
 
-        // Payload для таблиці: текст + мініатюри фото (колонка D на сервері).
-        async function buildNodesPayload() {
-            const out = [];
-            for (const n of state.nodes) {
-                const node = {
-                    title: n.title || '',
-                    desc: n.desc || '',
-                    image: await makeThumb(n.image, SHEET_THUMB_PX, 0.6),
-                    steps: []
-                };
-                for (const s of (n.steps || [])) {
-                    const imgs = [];
-                    for (const src of (s.images || []).slice(0, SHEET_MAX_IMAGES_PER_ROW)) {
-                        const t = await makeThumb(src, SHEET_THUMB_PX, 0.6);
-                        if (t) imgs.push(t);
-                    }
-                    node.steps.push({ text: s.text || '', images: imgs });
+        // Плоский список усіх фото документа з готовими іменами файлів.
+        // key прив'язує фото до конкретного рядка майбутньої таблиці.
+        function collectPhotos() {
+            const list = [];
+            state.nodes.forEach((node, ni) => {
+                const nodeName = cleanNamePart(node.title);
+                if (node.image) {
+                    list.push({
+                        key: 'n' + ni,
+                        name: (ni + 1) + '.0 ' + nodeName + ' - загальне фото.jpg',
+                        dataUrl: node.image
+                    });
                 }
-                out.push(node);
+                (node.steps || []).forEach((step, si) => {
+                    (step.images || []).forEach((img, ii) => {
+                        list.push({
+                            key: 'n' + ni + 's' + si + 'i' + ii,
+                            name: (ni + 1) + '.' + (si + 1) + ' ' + nodeName + ' - крок ' + (si + 1) +
+                                  ((step.images.length > 1) ? ' (' + (ii + 1) + ')' : '') + '.jpg',
+                            dataUrl: img
+                        });
+                    });
+                });
+            });
+            return list;
+        }
+
+        // Вивантаження пачками: кожен запит малий, тому не впирається
+        // ні в ліміт часу Apps Script, ні в мобільний інтернет.
+        async function uploadPhotos(photos, onProgress) {
+            const urlMap = {};
+            if (!photos.length) return urlMap;
+
+            let photoFolderId = null;
+            let done = 0;
+
+            for (let i = 0; i < photos.length; i += PHOTOS_PER_REQUEST) {
+                const batch = photos.slice(i, i + PHOTOS_PER_REQUEST);
+                const result = await postToScript({
+                    action: "upload_photos",
+                    title: state.title,
+                    date: new Date().toLocaleString('uk-UA'),
+                    photoDriveId: state.settings.photoDriveId,
+                    photoFolderId: photoFolderId,   // з другої пачки — вже готова підпапка
+                    photos: batch
+                });
+
+                photoFolderId = result.photoFolderId || photoFolderId;
+                Object.assign(urlMap, result.urls || {});
+
+                done += batch.length;
+                if (onProgress) onProgress(done, photos.length);
             }
-            return out;
+
+            return { urlMap, photoFolderId };
+        }
+
+        // Текст інструкції + посилання на вже вивантажені фото.
+        function buildNodesPayload(urlMap) {
+            const map = urlMap || {};
+            return state.nodes.map((node, ni) => ({
+                title: node.title || '',
+                desc: node.desc || '',
+                imageUrls: map['n' + ni] ? [map['n' + ni]] : [],
+                steps: (node.steps || []).map((step, si) => ({
+                    text: step.text || '',
+                    imageUrls: (step.images || [])
+                        .map((img, ii) => map['n' + ni + 's' + si + 'i' + ii])
+                        .filter(Boolean)
+                }))
+            }));
         }
 
         function setButtonBusy(btn, busyText) {
@@ -1326,19 +1464,33 @@
                     showGenOverlay("Кодую файл...");
                     const base64 = await blobToDataUrl(pdf.blob);
 
-                    showGenOverlay("Готую фото для таблиці...");
-                    const nodesForSheet = await buildNodesPayload();
+                    // Фото — окремими невеликими запитами, з прогресом
+                    let urlMap = {};
+                    let photoFolderId = null;
+                    const photos = collectPhotos();
 
-                    showGenOverlay("Зберігаю на Диск...");
+                    if (photos.length && state.settings.photoDriveId) {
+                        showGenOverlay("Завантажую фото 0 з " + photos.length + "...");
+                        const res = await uploadPhotos(photos, (done, total) => {
+                            const t = "Завантажую фото " + done + " з " + total + "...";
+                            setButtonStatus(DOM.saveBtn, t);
+                            showGenOverlay(t);
+                        });
+                        urlMap = res.urlMap;
+                        photoFolderId = res.photoFolderId;
+                    }
+
+                    showGenOverlay("Зберігаю PDF та таблицю...");
                     const result = await postToScript({
                         action: "save_instruction",
                         title: state.title,
                         equipment: state.equipment,
                         date: new Date().toLocaleString('uk-UA'),
                         driveId: state.settings.driveId,
+                        photoFolderId: photoFolderId,
                         filename: pdf.filename,
                         pdfBase64: base64,
-                        nodes: nodesForSheet
+                        nodes: buildNodesPayload(urlMap)
                     }, txt => setButtonStatus(DOM.saveBtn, txt));
 
                     showToast("✅ " + result.message + ` (${pdf.sizeMb} МБ)`, false, 6000);
@@ -1373,7 +1525,7 @@
                 const saved = JSON.parse(localStorage.getItem('foodline_data'));
                 if(saved) {
                     if(saved.archive) state.archive = saved.archive;
-                    if(saved.settings) state.settings = Object.assign({ email: '', driveId: '', apiKey: '', logo: null }, saved.settings);
+                    if(saved.settings) state.settings = Object.assign({ email: '', driveId: '', photoDriveId: '1HVA32yxdk2jUMZwDmFeGGbbduelgy266', apiKey: '', aiModel: '', logo: null }, saved.settings);
                     if(saved.currentDoc) {
                         state.docId = saved.currentDoc.id || crypto.randomUUID(); state.title = saved.currentDoc.title || ''; state.equipment = saved.currentDoc.equipment || ''; state.mainImage = saved.currentDoc.mainImage || null; state.nodes = saved.currentDoc.nodes || [];
                     }
